@@ -1,0 +1,120 @@
+You are an expert in operations research and interactive web development. I need you to create a **single, self-contained HTML/CSS/JS webpage** that visually and intuitively teaches the Simplex Method (maximization) using the exact step-by-step method described below.
+
+The webpage should be interactive, allow me to input or select an example problem, and then walk me through **each iteration** of the Simplex Method, explaining:
+
+- Why each operation is performed (the logical meaning).
+- What each variable (slack, basis, Cj, Zj, Cj−Zj, ratio) represents in real terms.
+- How to perceive the current tableau as a "corner point" of the feasible region.
+- What the pivot element, entering variable, leaving variable mean physically.
+
+Use **visual elements** (e.g., highlighted rows/columns, arrows, step-by-step narration) to make it intuitive. The page must follow exactly the method I provide below – do not invent alternative forms.
+
+---
+
+## The Simplex Method (My Exact Version)
+
+### 1. Standard Form Setup
+- **Maximization** problem.
+- Convert inequalities to equalities by adding **slack variables** (s₁, s₂, …).
+  Example: 2x₁ + 4x₂ ≤ 16 → 2x₁ + 4x₂ + s₁ = 16
+- All variables (x₁, x₂, …, s₁, s₂, …) ≥ 0.
+
+### 2. Tableau Architecture
+The tableau has these zones:
+
+| Zone | Name | Description |
+|------|------|-------------|
+| Top row | Cⱼ | Raw profit coefficients from original objective. |
+| Left column | C_B | Profit of variables currently in the basis. |
+| Middle column | Basis | Names of variables currently being produced (starts with slacks). |
+| Central matrix | Body | Coefficients showing resource consumption per variable. |
+| Right column | Quantity (RHS) | Current resource balance left. |
+| Bottom row 1 | Zⱼ | Opportunity cost: profit lost by diverting resources to a new variable. |
+| Bottom row 2 | Cⱼ − Zⱼ | Net evaluation: raw profit minus opportunity cost. |
+
+### 3. Iterative Logic (Step-by-Step)
+
+**Step A: Initial State**
+- Produce nothing → all decision variables (xⱼ) = 0.
+- All slack variables (sᵢ) are in the Basis.
+- Total profit Z = 0.
+
+**Step B: Entering Variable (Pivot Column)**
+- Look at the Net Evaluation row (Cⱼ − Zⱼ).
+- Choose the **most positive** value. That column = pivot column.
+- (Explain: this product adds the most profit per unit.)
+
+**Step C: Bottleneck Check (Ratio Test & Pivot Row)**
+- For each row, divide Quantity (RHS) by the pivot column value (ignore ≤ 0 values).
+- The **smallest positive ratio** = bottleneck → that row = pivot row.
+- Intersection of pivot column and pivot row = pivot element.
+- (Explain: we can only produce as much as the scarcest resource allows.)
+
+**Step D: Updating the Tableau (Row Operations)**
+- **Normalization**: Divide entire pivot row by the pivot element → new pivot row (makes pivot element = 1).
+- **Elimination**: For every other row, do: New Row = Old Row − (value in pivot column) × (new pivot row).
+- (Explain: we are "moving" to a new corner point, exchanging one basic variable for another.)
+
+**Step E: Calculate Zⱼ and Cⱼ − Zⱼ**
+- Zⱼ = Σ (C_B × column value) for each column.
+- Cⱼ − Zⱼ = raw profit − Zⱼ.
+
+### 4. Termination Rules
+- **Optimal**: All Cⱼ − Zⱼ ≤ 0. (Any change would reduce profit.)
+- **Unbounded**: A profitable column exists but all its values ≤ 0 → profit infinite (missing constraint).
+- **Infeasible**: Optimal condition met but an artificial variable (A) remains in basis with non‑zero value – you can mention this but not required for basic examples.
+
+---
+
+## Requirements for the Webpage
+
+1. **Example Problem** – Provide a default example, e.g.:
+	Maximize Z = 3x₁ + 5x₂
+	Subject to:
+	x₁ ≤ 4
+	2x₂ ≤ 12
+	3x₁ + 2x₂ ≤ 18
+	x₁, x₂ ≥ 0
+(Or let the user input a custom problem in standard form.)
+
+2. **Step-by-step walkthrough** – Show each iteration:
+- Display the current tableau clearly.
+- Highlight pivot column, pivot row, pivot element.
+- Show ratio calculations.
+- Show row operations step-by-step (maybe with "Next" button).
+- Explain the **meaning** of each operation in plain English.
+
+3. **Visual & Intuitive**:
+- Use colors, arrows, tooltips, or side notes.
+- Show the current basic variables and their values.
+- Show current total profit Z (calculated from C_B * RHS).
+- After each iteration, optionally show a 2D graph (if only 2 decision variables) to illustrate moving between corner points.
+
+4. **Educational Focus** – For each concept (slack, basis, Cⱼ, Zⱼ, ratio test, etc.), provide a brief **intuitive explanation** when hovering or clicking a help icon. Explain:
+- Why we add slacks (to turn inequalities into equalities).
+- What "basis" means (the variables we are currently producing).
+- What Zⱼ represents (the value we lose by making one unit of a new product).
+- Why we choose most positive Cⱼ−Zⱼ (largest profit increase).
+- Why ratio test picks the leaving variable (the first resource to run out).
+
+5. **Interactive Controls**:
+- Buttons: "Reset", "Next Iteration", "Previous Iteration", "Auto‑step".
+- Optional: allow user to change coefficients and re‑solve.
+
+6. **Technical Implementation**:
+- Pure HTML/CSS/JS (no external libraries required, but you may use a simple charting library like Chart.js or plain Canvas if a 2D graph is included).
+- Fully responsive, works on desktop and tablet.
+- Code should be clean, commented, and self‑contained in one file.
+
+7. **Output** – Provide the complete code as a single HTML block that I can save as `.html` and open in a browser.
+
+---
+
+## Additional Guidance
+
+- Start with the initial tableau (slacks in basis).
+- For each iteration, explain the **logic** before performing arithmetic.
+- After the final optimal tableau, display the optimal solution (x₁, x₂, …, Z) and a summary interpretation (e.g., "Produce 2 units of x₁ and 6 units of x₂ for a maximum profit of 36").
+- If the user inputs a custom problem, validate that it is a maximization with ≤ constraints (or add slack automatically).
+
+Make the learning experience feel like a friendly tutor is guiding them through the simplex method, not just a calculator.
