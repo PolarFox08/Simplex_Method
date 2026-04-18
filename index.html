@@ -126,7 +126,14 @@
 
         /* Tableau Table */
         .table-wrapper {
-            overflow-x: auto;
+            width: 100%;
+        }
+
+        @media(max-width: 1024px) {
+            .table-wrapper { 
+                overflow-x: auto; 
+                padding-top: 60px; /* Room for tooltips */
+            }
         }
 
         .simplex-table {
