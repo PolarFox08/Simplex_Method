@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simplex Method Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-blue-hover: #2563eb;
+            --hl-enter: rgba(56, 189, 248, 0.15);
+            --hl-leave: rgba(248, 113, 113, 0.15);
+            --hl-pivot: rgba(167, 139, 250, 0.4);
+            --pivot-border: #a855f7;
+            --success-bg: rgba(34, 197, 94, 0.2);
+            --success-border: rgba(34, 197, 94, 0.4);
+            --success-text: #4ade80;
+        }
+
+        * { box-sizing: border-box; }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #171033 100%);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        header {
+            margin: 24px 24px 0 24px;
+            text-align: center;
+        }
+
+        h1 { margin: 0; font-size: 2rem; color: #f8fafc; font-weight: 700; }
+        h2 { margin-top: 0; font-size: 1.25rem; color: #f1f5f9; border-bottom: 2px solid var(--border-color); padding-bottom: 8px;}
+        h3 { margin: 0 0 12px 0; font-size: 1.1rem; color: #60a5fa; }
+        
+        header p { color: var(--text-muted); margin-top: 8px; font-size: 1.1rem; }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 24px;
+            padding: 24px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        @media(max-width: 1024px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+
+        .math-block {
+            background: rgba(0,0,0,0.3);
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .btn.primary { background: var(--accent-blue); color: white; }
+        .btn.primary:hover:not(:disabled) { background: var(--accent-blue-hover); transform: translateY(-1px); }
+        .btn.secondary { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.1); }
+        .btn.secondary:hover:not(:disabled) { background: rgba(255,255,255,0.2); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .step-explanation {
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .step-explanation p { margin: 0; color: #cbd5e1; font-size: 1rem; }
+
+        .profit-display {
+            text-align: center;
+            padding: 20px;
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            border-radius: 12px;
+            color: var(--success-text);
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.1);
+        }
+        .profit-display .label { font-size: 1rem; color: #bbf7d0; text-transform: uppercase; letter-spacing: 1px;}
+        .profit-display .value { font-size: 2.5rem; font-weight: 700; margin-top: 5px; }
+
+        /* Tableau Table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .simplex-table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+            font-size: 1.05rem;
+        }
+
+        .simplex-table th, .simplex-table td {
+            padding: 14px 16px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            white-space: nowrap;
+        }
+
+        .simplex-table th { background: rgba(15, 23, 42, 0.6); font-weight: 600; }
+        .simplex-table thead tr:first-child th { background: rgba(0,0,0,0.4); border-bottom: 2px solid var(--border-color); }
+        
+        .zone-name { font-size: 0.8rem; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase; }
+        
+        .hl-col { background-color: var(--hl-enter) !important; color: #bae6fd; }
+        .hl-row { background-color: var(--hl-leave) !important; color: #fecaca; }
+        .hl-pivot {
+            background-color: var(--hl-pivot) !important;
+            font-weight: 700;
+            color: #fff;
+            box-shadow: inset 0 0 0 2px var(--pivot-border);
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Tooltips */
+        .tip { position: relative; cursor: help; text-decoration: underline dotted rgba(255,255,255,0.4); text-underline-offset: 4px; }
+        .tip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 125%; left: 50%; transform: translateX(-50%);
+            background: #000; color: #fff;
+            padding: 10px 14px; border-radius: 6px;
+            white-space: normal; width: max-content; max-width: 280px;
+            z-index: 1000; font-size: 0.9rem; line-height: 1.4;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
+            pointer-events: none;
+        }
+        .tip:hover::before {
+            content: ''; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+            border-width: 6px; border-style: solid; border-color: #000 transparent transparent transparent;
+            z-index: 1000; margin-bottom: -1px; pointer-events: none;
+        }
+
+        /* Editor inputs */
+        input[type="number"] {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            padding: 8px;
+            border-radius: 6px;
+            width: 70px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        input[type="number"]:focus { outline: none; border-color: var(--accent-blue); }
+        .edit-table td, .edit-table th { border: none; text-align: left; padding: 10px; background: transparent; }
+        .edit-table { margin-bottom: 24px; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <header class="glass-panel" style="margin-bottom:0; box-shadow:none; border-bottom-left-radius:0; border-bottom-right-radius:0; border-bottom:none;">
+        <h1>Simplex Method Visualizer</h1>
+        <p>An interactive, step-by-step guide to corner point linear optimization.</p>
+    </header>
+    
+    <div class="layout">
+        <div class="sidebar glass-panel">
+            <h2>Problem Definition (Standard Form)</h2>
+            <div id="problem-text"></div>
+            <button id="btn-edit" class="btn secondary" style="width:100%; margin-bottom:20px;" onclick="showEditor()">Edit Problem / Custom Data</button>
+            
+            <h2>Controls</h2>
+            <div class="controls">
+                <button id="btn-prev" class="btn secondary" onclick="goPrev()">&#9664; Prev</button>
+                <button id="btn-next" class="btn primary" onclick="goNext()">Next &#9654;</button>
+                <button id="btn-auto" class="btn secondary" onclick="toggleAuto()">Auto ▶</button>
+                <button id="btn-reset" class="btn secondary" onclick="goReset()">Reset</button>
+            </div>
+            
+            <div class="step-explanation">
+                <h3 id="step-title">Initialization</h3>
+                <p id="step-desc">Loading...</p>
+            </div>
+            
+            <div class="profit-display tip" data-tip="Current objective value Z, calculated dynamically based on variables in the basis.">
+                <div class="label">Current Profit (Z)</div>
+                <div class="value" id="profit-val">0</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+             <div id="tableau-container" class="glass-panel table-wrapper">
+                 <table class="simplex-table" id="simplex-table">
+                     <!-- dynamically filled by JS -->
+                 </table>
+             </div>
+             
+             <div id="editor-container" class="glass-panel" style="display: none;">
+                 <h2>Edit LP Problem (Maximization)</h2>
+                 <p style="color:#94a3b8; margin-bottom: 20px;">Input your objective function coefficients and constraints below. Slacks will be added automatically.</p>
+                 
+                 <div style="margin-bottom: 20px; display:flex; gap:20px; background: rgba(0,0,0,0.2); padding:15px; border-radius:8px;">
+                     <label>Variables: <input type="number" id="edit-vars" min="2" max="5" onchange="buildEditorGrid()"></label>
+                     <label>Constraints: <input type="number" id="edit-cons" min="1" max="5" onchange="buildEditorGrid()"></label>
+                 </div>
+                 
+                 <div id="edit-matrix" class="table-wrapper"></div>
+                 
+                 <div style="display:flex; gap:12px; margin-top:20px;">
+                     <button class="btn primary" onclick="applyProblem()">Solve / Visualize</button>
+                     <button class="btn secondary" onclick="cancelEdit()">Cancel</button>
+                 </div>
+             </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // System formatting utils
+    function sub(str) {
+        return str.replace(/\d+/g, match => {
+            return match.split('').map(d => String.fromCharCode(8320 + parseInt(d))).join('');
+        });
+    }
+
+    function formatNum(num) {
+        if (Math.abs(num) < 1e-8) return "0";
+        let s = num.toFixed(2);
+        if(s.endsWith(".00")) return parseInt(s).toString();
+        if(s.endsWith("0")) return s.slice(0, -1);
+        // prevent negative zero
+        if(s === "-0") return "0";
+        return s;
+    }
+
+    // Example Initial Problem
+    let currentProblem = {
+        numVars: 2,
+        numCons: 3,
+        c: [3, 5],
+        A: [
+            [1, 0],
+            [0, 2],
+            [3, 2]
+        ],
+        b: [4, 12, 18]
+    };
+
+    let currentViews = [];
+    let currentStep = 0;
+    let autoInterval = null;
+
+    // Convert to Standard Form with Slacks
+    function buildStandardForm(prob) {
+        let nV = prob.numVars;
+        let nC = prob.numCons;
+        let vars = [];
+        for(let i=0; i<nV; i++) vars.push('x' + (i+1));
+        for(let i=0; i<nC; i++) vars.push('s' + (i+1));
+
+        let c = [...prob.c];
+        for(let i=0; i<nC; i++) c.push(0);
+
+        let A = [];
+        let basis = [];
+        for(let i=0; i<nC; i++) {
+            let row = [...prob.A[i]];
+            for(let j=0; j<nC; j++) {
+                row.push(i === j ? 1 : 0);
+            }
+            A.push(row);
+            basis.push(nV + i);
+        }
+
+        return { c, vars, A, b: [...prob.b], basis };
+    }
+
+    // Engine: Generates all views frame-by-frame
+    function generateViews(problem) {
+        let views = [];
+        let A = problem.A.map(row => [...row]);
+        let b = [...problem.b];
+        let c = [...problem.c];
+        let basis = [...problem.basis];
+        let vars = [...problem.vars];
+
+        // Safegaurd iter limits
+        for(let it=0; it<15; it++) {
+            let cb = basis.map(i => c[i]);
+            let z = 0;
+            for(let i=0; i<basis.length; i++) z += cb[i] * b[i];
+
+            let zj = [];
+            let cj_zj = [];
+            for(let j=0; j<vars.length; j++) {
+                let sum = 0;
+                for(let i=0; i<basis.length; i++) sum += cb[i] * A[i][j];
+                zj.push(sum);
+                cj_zj.push(c[j] - sum);
+            }
+
+            let isOptimal = cj_zj.every(v => v <= 1e-8);
+
+            let baseData = {
+                A: A.map(r=>[...r]), b: [...b], c: [...c], cb: [...cb], 
+                basis: [...basis], zj: [...zj], cj_zj: [...cj_zj], z: z, vars: [...vars]
+            };
+
+            if(isOptimal) {
+                views.push({
+                    ...baseData,
+                    title: "Status: Optimal Reached",
+                    explanation: "Check the Cⱼ − Zⱼ row. All values are ≤ 0! This indicates that introducing any new variable will strictly decrease our profit. We have found the absolute optimal corner point.",
+                    highlightCol: -1, highlightRow: -1, showRatios: false
+                });
+                break;
+            }
+
+            // Find Pivot Col (Most positive Cj-Zj)
+            let maxVal = 0, pCol = -1;
+            for(let j=0; j<cj_zj.length; j++) {
+                if(cj_zj[j] > maxVal + 1e-8) { maxVal = cj_zj[j]; pCol = j; }
+            }
+
+            if(it===0) {
+                 views.push({
+                    ...baseData,
+                    title: `Initial State`,
+                    explanation: `We begin at the origin. We produce no decision variables, so slacks act as our basis (unused resources). Total profit is 0.`,
+                    highlightCol: -1, highlightRow: -1, showRatios: false
+                });
+            }
+
+            views.push({
+                ...baseData,
+                title: `Iteration ${it+1}: Step B - Entering Variable`,
+                explanation: `Look at the Net Evaluation row (Cⱼ − Zⱼ). The highest positive number is ${formatNum(maxVal)} for column ${sub(vars[pCol])}. This implies making one unit of ${sub(vars[pCol])} adds the most profit margins. It becomes our Entering Variable (Pivot Column).`,
+                highlightCol: pCol, highlightRow: -1, showRatios: false
+            });
+
+            // Ratio test
+            let minRatio = Infinity, pRow = -1;
+            let ratios = [];
+            for(let i=0; i<b.length; i++) {
+                if(A[i][pCol] > 1e-8) {
+                    let r = b[i] / A[i][pCol];
+                    ratios.push(r);
+                    if(r < minRatio) { minRatio = r; pRow = i; }
+                } else {
+                    ratios.push(-1);
+                }
+            }
+
+            if(pRow === -1) {
+                views.push({
+                    ...baseData,
+                    title: `Status: Unbounded Problem`,
+                    explanation: `Variable ${sub(vars[pCol])} increases profit, but no constraint limits it (all values in its column are ≤ 0). We could theoretically produce an infinite amount making Profit = ∞!`,
+                    highlightCol: pCol, highlightRow: -1, showRatios: true, ratios: ratios
+                });
+                break;
+            }
+
+            views.push({
+                ...baseData,
+                title: `Iteration ${it+1}: Step C - Ratio Test & Leaving Var`,
+                explanation: `We do a Ratio Test (Quantity ÷ Pivot Column values) to find which resource becomes a bottleneck first. Row ${pRow+1} has the smallest positive ratio (${formatNum(minRatio)}). Thus, ${sub(vars[basis[pRow]])} leaves the basis. The intersection is our Pivot Element (${formatNum(A[pRow][pCol])}).`,
+                highlightCol: pCol, highlightRow: pRow, showRatios: true, ratios: ratios
+            });
+
+            views.push({
+                ...baseData,
+                title: `Iteration ${it+1}: Step D - Row Operations`,
+                explanation: `Prepare to pivot! Operation 1: Normalize the pivot row by dividing it by the pivot element. Operation 2: Eliminate all other values in the pivot column by subtracting multiples of the new pivot row from other rows. Click "Next" to execute the graphical transformation.`,
+                highlightCol: pCol, highlightRow: pRow, showRatios: true, ratios: ratios, isTransition: true
+            });
+
+            // Perform Math
+            let newA = A.map(r=>[...r]), newb = [...b];
+            let pVal = A[pRow][pCol];
+            for(let j=0; j<vars.length; j++) newA[pRow][j] = A[pRow][j]/pVal;
+            newb[pRow] = b[pRow]/pVal;
+            
+            for(let i=0; i<b.length; i++) {
+                if(i!==pRow) {
+                    let f = A[i][pCol];
+                    for(let j=0; j<vars.length; j++) newA[i][j] = A[i][j] - f*newA[pRow][j];
+                    newb[i] = b[i] - f*newb[pRow];
+                }
+            }
+            A = newA; b = newb; basis[pRow] = pCol;
+        }
+        return views;
+    }
+
+    function renderProblemDesc(prob) {
+        let stdProb = buildStandardForm(prob);
+        
+        let html = `<div class="math-block" style="color: #60a5fa"><strong>Max Z</strong> = `;
+        prob.c.forEach((cval, i) => {
+            if(i>0) html += ` + `;
+            html += `${cval}${sub('x'+(i+1))}`;
+        });
+        html += `</div><div class="math-block" style="color:#cbd5e1; font-size:1rem;"><strong>Subject to (Standard Form):</strong><br>`;
+        
+        prob.A.forEach((row, i) => {
+            row.forEach((val, j) => {
+                if(j>0) html += ` + `;
+                html += `${val}${sub('x'+(j+1))}`;
+            });
+            html += ` <span style="color:#a78bfa">+ 1${sub('s'+(i+1))}</span>`;
+            html += ` = ${prob.b[i]}<br>`;
+        });
+        html += `Variables &ge; 0</div>`;
+        document.getElementById('problem-text').innerHTML = html;
+    }
+
+    function renderTable(view) {
+        let thead = document.createElement('thead');
+        
+        // Row 1: Cj
+        let trCj = document.createElement('tr');
+        trCj.innerHTML = `<th colspan="3" class="zone-name tip" data-tip="C_j: The raw profit contribution per unit of each variable from your original objective function.">Cⱼ (Coefficients)</th>`;
+        view.vars.forEach((v, idx) => {
+            trCj.innerHTML += `<th>${formatNum(view.c[idx])}</th>`;
+        });
+        trCj.innerHTML += `<th class="zone-name">-</th><th class="zone-name">-</th>`;
+        thead.appendChild(trCj);
+
+        // Row 2: Headers
+        let trH = document.createElement('tr');
+        trH.innerHTML = `
+            <th class="zone-name tip" data-tip="Visual map of table sections">Zone</th>
+            <th class="tip" data-tip="C_B: Coefficients of the variables currently forming the basis.">C_B</th>
+            <th class="tip" data-tip="Basis: System variables presently forming our corner point solution.">Basis</th>
+        `;
+        view.vars.forEach((v, idx) => {
+            let isCol = (idx === view.highlightCol);
+            let tip = v.startsWith('s') ? "Slack Variable. Added to turn ≤ into =. Denotes unused resource limits." : "Decision Variable. Denotes direct output volume being produced.";
+            trH.innerHTML += `<th class="tip ${isCol ? 'hl-col' : ''}" data-tip="${tip}">${sub(v)}</th>`;
+        });
+        trH.innerHTML += `
+            <th class="tip" data-tip="Quantity (RHS): The available unallocated resources, or value of a basic variable.">Quantity</th>
+            <th class="tip" data-tip="Ratio Check: Right Hand Side ÷ strict positive pivot column elements. Finds fastest-draining resource.">Ratio</th>
+        `;
+        thead.appendChild(trH);
+        
+        let tbody = document.createElement('tbody');
+        view.A.forEach((row, rIdx) => {
+            let tr = document.createElement('tr');
+            let isRow = (rIdx === view.highlightRow);
+            
+            tr.innerHTML = `
+                <td class="zone-name">Body</td>
+                <td>${formatNum(view.cb[rIdx])}</td>
+                <td style="font-weight: bold; color:white;">${sub(view.vars[view.basis[rIdx]])}</td>
+            `;
+            
+            row.forEach((val, cIdx) => {
+                let isCol = (cIdx === view.highlightCol);
+                let isPivot = isRow && isCol;
+                let cls = "";
+                if (isPivot) cls = "hl-pivot tip";
+                else if (isRow) cls = "hl-row";
+                else if (isCol) cls = "hl-col";
+                
+                let extra = isPivot ? ` data-tip="Pivot Element. Intersection. Will act as the divisor for row normalization."` : "";
+                tr.innerHTML += `<td class="${cls}"${extra}>${formatNum(val)}</td>`;
+            });
+            
+            tr.innerHTML += `<td class="${isRow?'hl-row':''}">${formatNum(view.b[rIdx])}</td>`;
+            
+            let ratioVal = (view.showRatios && view.ratios[rIdx] >= 0) ? formatNum(view.ratios[rIdx]) : "-";
+            tr.innerHTML += `<td class="${isRow?'hl-pivot':''}">${ratioVal}</td>`;
+            
+            tbody.appendChild(tr);
+        });
+
+        let tfoot = document.createElement('tfoot');
+        
+        // Zj
+        let trZj = document.createElement('tr');
+        trZj.innerHTML = `<td colspan="3" class="zone-name tip" style="color:#cbd5e1" data-tip="Z_j: Cost incurred by transferring resources from basic variables to produce a new variable unit.">Zⱼ (Opp. Cost)</td>`;
+        view.zj.forEach((val, cIdx) => {
+            let isCol = (cIdx === view.highlightCol);
+            trZj.innerHTML += `<td class="${isCol ? 'hl-col' : ''}">${formatNum(val)}</td>`;
+        });
+        trZj.innerHTML += `<td></td><td></td>`;
+        tfoot.appendChild(trZj);
+
+        // Cj - Zj
+        let trCjZj = document.createElement('tr');
+        trCjZj.innerHTML = `<td colspan="3" class="zone-name tip" style="color:#60a5fa" data-tip="C_j - Z_j: Raw Profit minus Opportunity Cost. Value > 0 signifies a profitable expansion!">Cⱼ − Zⱼ (Net Eval)</td>`;
+        view.cj_zj.forEach((val, cIdx) => {
+            let isCol = (cIdx === view.highlightCol);
+            let cls = isCol ? 'hl-pivot tip' : '';
+            trCjZj.innerHTML += `<td class="${cls}" ${isCol?'data-tip="Most positive Net Evaluation becomes pivot column."':''}>${formatNum(val)}</td>`;
+        });
+        trCjZj.innerHTML += `<td></td><td></td>`;
+        tfoot.appendChild(trCjZj);
+
+        const tbl = document.getElementById('simplex-table');
+        tbl.innerHTML = '';
+        tbl.appendChild(thead);
+        tbl.appendChild(tbody);
+        tbl.appendChild(tfoot);
+    }
+
+    function updateUI() {
+        document.getElementById('btn-prev').disabled = currentStep === 0;
+        document.getElementById('btn-next').disabled = currentStep === currentViews.length - 1;
+        
+        let view = currentViews[currentStep];
+        document.getElementById('step-title').innerText = view.title;
+        document.getElementById('step-desc').innerText = view.explanation;
+        
+        let profitEl = document.getElementById('profit-val');
+        profitEl.innerText = formatNum(view.z);
+        if (currentStep === currentViews.length - 1 && !view.unbounded) {
+            profitEl.style.color = "#86efac";
+            profitEl.innerText += " (Max!)";
+        } else {
+             profitEl.style.color = "var(--success-text)";
+        }
+        
+        renderTable(view);
+    }
+
+    function goNext() {
+        if(currentStep < currentViews.length - 1) {
+            currentStep++;
+            updateUI();
+        } else {
+            if(autoInterval) toggleAuto();
+        }
+    }
+
+    function goPrev() {
+        if(currentStep > 0) {
+            currentStep--;
+            updateUI();
+        }
+    }
+
+    function goReset() {
+        if(autoInterval) toggleAuto();
+        currentStep = 0;
+        updateUI();
+    }
+    
+    function toggleAuto() {
+        let btn = document.getElementById('btn-auto');
+        if(autoInterval) {
+            clearInterval(autoInterval);
+            autoInterval = null;
+            btn.innerText = "Auto ▶";
+            btn.className = "btn secondary";
+        } else {
+            btn.innerText = "Stop ⏸";
+            btn.className = "btn primary";
+            autoInterval = setInterval(goNext, 3500); // 3.5s per step
+        }
+    }
+
+    // Editor Logic
+    function showEditor() {
+        if(autoInterval) toggleAuto();
+        document.getElementById('tableau-container').style.display = 'none';
+        document.getElementById('editor-container').style.display = 'block';
+        
+        document.getElementById('edit-vars').value = currentProblem.numVars;
+        document.getElementById('edit-cons').value = currentProblem.numCons;
+        buildEditorGrid(true);
+    }
+
+    function buildEditorGrid(prepopulate = false) {
+        let nv = parseInt(document.getElementById('edit-vars').value);
+        let nc = parseInt(document.getElementById('edit-cons').value);
+        
+        let usePre = prepopulate && currentProblem.numVars === nv && currentProblem.numCons === nc;
+
+        let html = `<table class="edit-table"><tr><th style="color:#60a5fa">Objective (Max Z)</th>`;
+        for(let i=0; i<nv; i++) {
+            let v = usePre ? currentProblem.c[i] : 1;
+            html += `<td><input type="number" id="obj-c${i}" value="${v}"> ${sub('x'+(i+1))}</td>`;
+        }
+        html += `</tr>`;
+        
+        for(let r=0; r<nc; r++) {
+            html += `<tr><td style="color:#cbd5e1">Constraint ${r+1}</td>`;
+            for(let c=0; c<nv; c++) {
+                let v = usePre ? currentProblem.A[r][c] : 1;
+                html += `<td><input type="number" id="a-${r}-${c}" value="${v}"> ${sub('x'+(c+1))}</td>`;
+            }
+            let bval = usePre ? currentProblem.b[r] : 10;
+            html += `<td>&le; <input type="number" id="b-${r}" value="${bval}"></td></tr>`;
+        }
+        html += `</table>`;
+        document.getElementById('edit-matrix').innerHTML = html;
+    }
+
+    function applyProblem() {
+        let nv = parseInt(document.getElementById('edit-vars').value);
+        let nc = parseInt(document.getElementById('edit-cons').value);
+        
+        let c = [];
+        for(let i=0; i<nv; i++) c.push(parseFloat(document.getElementById(`obj-c${i}`).value) || 0);
+        
+        let A = [];
+        let b = [];
+        for(let r=0; r<nc; r++) {
+            let row = [];
+            for(let j=0; j<nv; j++) {
+                row.push(parseFloat(document.getElementById(`a-${r}-${j}`).value) || 0);
+            }
+            A.push(row);
+            b.push(parseFloat(document.getElementById(`b-${r}`).value) || 0);
+        }
+        
+        currentProblem = { numVars: nv, numCons: nc, c, A, b };
+        
+        document.getElementById('tableau-container').style.display = 'block';
+        document.getElementById('editor-container').style.display = 'none';
+        
+        initApp(currentProblem);
+    }
+
+    function cancelEdit() {
+        document.getElementById('tableau-container').style.display = 'block';
+        document.getElementById('editor-container').style.display = 'none';
+    }
+
+    function initApp(probInfo) {
+        let stdProb = buildStandardForm(probInfo);
+        currentViews = generateViews(stdProb);
+        currentStep = 0;
+        renderProblemDesc(probInfo);
+        updateUI();
+    }
+
+    // Start
+    window.onload = () => {
+        initApp(currentProblem);
+    };
+</script>
+</body>
+</html>
