@@ -1,695 +1,1262 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Simplex Method Visualizer</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-color: #0f172a;
-            --panel-bg: rgba(30, 41, 59, 0.7);
-            --border-color: rgba(255, 255, 255, 0.1);
-            --text-main: #e2e8f0;
-            --text-muted: #94a3b8;
-            --accent-blue: #3b82f6;
-            --accent-blue-hover: #2563eb;
-            --hl-enter: rgba(56, 189, 248, 0.15);
-            --hl-leave: rgba(248, 113, 113, 0.15);
-            --hl-pivot: rgba(167, 139, 250, 0.4);
-            --pivot-border: #a855f7;
-            --success-bg: rgba(34, 197, 94, 0.2);
-            --success-border: rgba(34, 197, 94, 0.4);
-            --success-text: #4ade80;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simplex Method — Interactive Walkthrough</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0f1e;
+  --surface:#111827;
+  --surface2:#1a2235;
+  --surface3:#1e2d45;
+  --border:rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.12);
+  --text:#e8edf5;
+  --muted:#7a8aa0;
+  --blue:#3b82f6;
+  --blue-dim:rgba(59,130,246,0.15);
+  --cyan:#06b6d4;
+  --cyan-dim:rgba(6,182,212,0.12);
+  --purple:#8b5cf6;
+  --purple-dim:rgba(139,92,246,0.15);
+  --green:#10b981;
+  --green-dim:rgba(16,185,129,0.12);
+  --amber:#f59e0b;
+  --amber-dim:rgba(245,158,11,0.12);
+  --red:#ef4444;
+  --red-dim:rgba(239,68,68,0.12);
+  --hl-col:rgba(6,182,212,0.18);
+  --hl-row:rgba(239,68,68,0.15);
+  --hl-pivot:rgba(139,92,246,0.35);
+  --pivot-ring:#8b5cf6;
+}
+html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+body{display:flex;flex-direction:column}
 
-        * { box-sizing: border-box; }
-        
-        body {
-            background: linear-gradient(135deg, #0f172a 0%, #171033 100%);
-            color: var(--text-main);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            margin: 0;
-            min-height: 100vh;
-            line-height: 1.5;
-        }
+/* ─── TOP BAR ─── */
+#topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 28px;
+  background:rgba(17,24,39,0.95);
+  border-bottom:1px solid var(--border2);
+  backdrop-filter:blur(12px);
+  flex-shrink:0;
+  gap:16px;
+}
+#topbar h1{font-size:1.05rem;font-weight:700;color:#fff;white-space:nowrap;letter-spacing:-0.01em}
+#topbar h1 span{color:var(--blue)}
+#progress-bar-wrap{flex:1;min-width:80px;max-width:500px;position:relative}
+#progress-track{height:4px;background:var(--surface2);border-radius:100px;overflow:hidden}
+#progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:100px;transition:width 0.4s ease}
+#slide-counter{font-size:0.8rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px;text-align:center}
+.top-nav{display:flex;gap:8px;flex-shrink:0}
+.top-nav button{
+  padding:7px 16px;border-radius:8px;border:1px solid var(--border2);
+  font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;
+  transition:all 0.18s;
+}
+#btn-prev{background:transparent;color:var(--muted)}
+#btn-prev:hover:not(:disabled){background:var(--surface2);color:var(--text)}
+#btn-next{background:var(--blue);color:#fff;border-color:var(--blue)}
+#btn-next:hover:not(:disabled){background:#2563eb}
+button:disabled{opacity:0.35;cursor:not-allowed}
 
-        .glass-panel {
-            background: var(--panel-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
+/* ─── STAGE ─── */
+#stage{
+  flex:1;position:relative;overflow:hidden;
+  display:flex;align-items:stretch;
+}
 
-        header {
-            margin: 24px 24px 0 24px;
-            text-align: center;
-        }
+/* ─── SLIDE WRAPPER ─── */
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  padding:32px 40px;
+  overflow-y:auto;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.35s ease, transform 0.35s ease;
+  transform:translateX(30px);
+}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.exiting{opacity:0;transform:translateX(-30px)}
 
-        h1 { margin: 0; font-size: 2rem; color: #f8fafc; font-weight: 700; }
-        h2 { margin-top: 0; font-size: 1.25rem; color: #f1f5f9; border-bottom: 2px solid var(--border-color); padding-bottom: 8px;}
-        h3 { margin: 0 0 12px 0; font-size: 1.1rem; color: #60a5fa; }
-        
-        header p { color: var(--text-muted); margin-top: 8px; font-size: 1.1rem; }
+/* scrollbar */
+.slide::-webkit-scrollbar{width:5px}
+.slide::-webkit-scrollbar-track{background:transparent}
+.slide::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:100px}
 
-        .layout {
-            display: grid;
-            grid-template-columns: 380px 1fr;
-            gap: 24px;
-            padding: 24px;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
+/* ─── SLIDE LAYOUTS ─── */
+.slide-inner{max-width:1100px;margin:0 auto;width:100%}
 
-        @media(max-width: 1024px) {
-            .layout { grid-template-columns: 1fr; }
-        }
+/* ─── TAGS / BADGES ─── */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:100px;font-size:0.72rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:0.07em;margin-bottom:14px;
+}
+.badge-blue{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,130,246,0.3)}
+.badge-purple{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(139,92,246,0.3)}
+.badge-green{background:var(--green-dim);color:var(--green);border:1px solid rgba(16,185,129,0.3)}
+.badge-amber{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,0.3)}
+.badge-cyan{background:var(--cyan-dim);color:var(--cyan);border:1px solid rgba(6,182,212,0.3)}
+.badge-red{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,0.3)}
 
-        .math-block {
-            background: rgba(0,0,0,0.3);
-            padding: 16px;
-            border-radius: 8px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 1.1rem;
-            margin-bottom: 16px;
-            border-left: 4px solid var(--accent-blue);
-        }
+/* ─── HEADINGS ─── */
+.slide-title{font-size:1.9rem;font-weight:800;line-height:1.2;margin-bottom:8px;color:#fff;letter-spacing:-0.02em}
+.slide-sub{font-size:1rem;color:var(--muted);margin-bottom:28px;line-height:1.55}
+.section-head{font-size:1.05rem;font-weight:700;color:#fff;margin:24px 0 10px;display:flex;align-items:center;gap:8px}
+.section-head::before{content:'';display:inline-block;width:3px;height:18px;background:var(--blue);border-radius:2px}
 
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 24px;
-        }
+/* ─── CARDS GRID ─── */
+.cards{display:grid;gap:14px}
+.cards-2{grid-template-columns:repeat(2,1fr)}
+.cards-3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:800px){.cards-2,.cards-3{grid-template-columns:1fr}}
+.card{
+  background:var(--surface2);border:1px solid var(--border2);border-radius:12px;
+  padding:18px 20px;
+}
+.card-title{font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px}
+.card p{font-size:0.92rem;color:#a8b8cc;line-height:1.6}
+.card strong{color:var(--text)}
 
-        .btn {
-            padding: 10px 16px;
-            border-radius: 8px;
-            border: none;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: inherit;
-        }
+/* ─── CODE / MATH BLOCKS ─── */
+.math-block{
+  background:#0d1520;border:1px solid var(--border2);border-left:3px solid var(--blue);
+  border-radius:10px;padding:16px 20px;
+  font-family:'JetBrains Mono',monospace;font-size:0.9rem;line-height:1.7;
+  color:#c8d8ec;margin:12px 0;overflow-x:auto;white-space:pre;
+}
+.math-block.purple{border-left-color:var(--purple)}
+.math-block.green{border-left-color:var(--green)}
+.math-block.amber{border-left-color:var(--amber)}
 
-        .btn.primary { background: var(--accent-blue); color: white; }
-        .btn.primary:hover:not(:disabled) { background: var(--accent-blue-hover); transform: translateY(-1px); }
-        .btn.secondary { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.1); }
-        .btn.secondary:hover:not(:disabled) { background: rgba(255,255,255,0.2); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* ─── TABLEAU ─── */
+.tableau-wrap{overflow-x:auto;margin:16px 0}
+table.stab{
+  border-collapse:collapse;font-family:'JetBrains Mono',monospace;
+  font-size:0.88rem;min-width:100%;
+}
+table.stab th,table.stab td{
+  padding:11px 16px;text-align:center;border:1px solid var(--border);
+  white-space:nowrap;
+}
+table.stab thead th{background:rgba(0,0,0,0.3);color:var(--muted);font-size:0.75rem;letter-spacing:0.05em;text-transform:uppercase}
+table.stab thead tr:first-child th{background:#060d1a;color:var(--blue);font-weight:600;font-size:0.85rem;letter-spacing:0}
+table.stab tbody td{background:var(--surface)}
+table.stab tfoot td{background:#060d1a;color:var(--muted);font-size:0.85rem}
+table.stab .basis-col{font-weight:700;color:#fff}
+table.stab .cb-col{color:var(--amber)}
+table.stab .hl-col{background:var(--hl-col)!important;color:var(--cyan)!important}
+table.stab .hl-row{background:var(--hl-row)!important;color:#fca5a5!important}
+table.stab .hl-pivot{background:var(--hl-pivot)!important;color:#fff!important;font-weight:700;box-shadow:inset 0 0 0 2px var(--pivot-ring)}
+table.stab .zj-row td{color:#7dd3fc}
+table.stab .cjzj-row td{color:#f9a8d4}
+table.stab .highlight-pos{color:var(--green)!important;font-weight:700}
+table.stab .highlight-neg{color:var(--red)!important}
+table.stab .highlight-zero{color:var(--muted)!important}
 
-        .step-explanation {
-            background: rgba(0,0,0,0.2);
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
+/* ─── EXPLAIN BOXES ─── */
+.explain{
+  background:var(--surface2);border:1px solid var(--border2);border-radius:12px;
+  padding:18px 20px;margin:12px 0;
+}
+.explain .explain-title{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.explain .explain-title svg{width:14px;height:14px;flex-shrink:0}
+.explain-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.explain-list li{font-size:0.91rem;color:#a8b8cc;line-height:1.55;padding-left:18px;position:relative}
+.explain-list li::before{content:'→';position:absolute;left:0;color:var(--blue);font-weight:700}
+.explain-list li strong{color:var(--text)}
+.explain-list li .val{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--cyan)}
 
-        .step-explanation p { margin: 0; color: #cbd5e1; font-size: 1rem; }
+/* ─── TWO-COL LAYOUT ─── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}}
 
-        .profit-display {
-            text-align: center;
-            padding: 20px;
-            background: var(--success-bg);
-            border: 1px solid var(--success-border);
-            border-radius: 12px;
-            color: var(--success-text);
-            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.1);
-        }
-        .profit-display .label { font-size: 1rem; color: #bbf7d0; text-transform: uppercase; letter-spacing: 1px;}
-        .profit-display .value { font-size: 2.5rem; font-weight: 700; margin-top: 5px; }
+/* ─── HIGHLIGHT CALLOUT ─── */
+.callout{
+  border-radius:10px;padding:14px 18px;margin:14px 0;
+  display:flex;align-items:flex-start;gap:12px;font-size:0.91rem;line-height:1.55;
+}
+.callout-blue{background:var(--blue-dim);border:1px solid rgba(59,130,246,0.25);color:#93c5fd}
+.callout-purple{background:var(--purple-dim);border:1px solid rgba(139,92,246,0.25);color:#c4b5fd}
+.callout-green{background:var(--green-dim);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7}
+.callout-amber{background:var(--amber-dim);border:1px solid rgba(245,158,11,0.25);color:#fcd34d}
+.callout-red{background:var(--red-dim);border:1px solid rgba(239,68,68,0.25);color:#fca5a5}
+.callout-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+.callout strong{color:#fff}
 
-        /* Tableau Table */
-        .table-wrapper {
-            width: 100%;
-        }
+/* ─── STEP NUMBER BADGE ─── */
+.step-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:50%;
+  background:var(--blue);color:#fff;font-size:0.8rem;font-weight:800;
+  flex-shrink:0;
+}
+.step-row{display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
+.step-content{flex:1}
+.step-content p{font-size:0.92rem;color:#a8b8cc;line-height:1.6}
+.step-content strong{color:var(--text)}
 
-        @media(max-width: 1024px) {
-            .table-wrapper { 
-                overflow-x: auto; 
-                padding-top: 60px; /* Room for tooltips */
-            }
-        }
+/* ─── RATIO TABLE ─── */
+.ratio-table{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.ratio-row{
+  display:flex;align-items:center;gap:12px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;
+  font-size:0.9rem;font-family:'JetBrains Mono',monospace;
+}
+.ratio-row.winner{background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.3)}
+.ratio-row .label{color:var(--muted);font-size:0.75rem;min-width:60px}
+.ratio-row .calc{color:#cbd5e1;flex:1}
+.ratio-row .result{font-weight:700;color:var(--cyan)}
+.ratio-row.winner .result{color:var(--green)}
+.ratio-row .crown{color:var(--green)}
 
-        .simplex-table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 10px;
-            font-size: 1.05rem;
-        }
+/* ─── FINAL SOLUTION BOX ─── */
+.solution-box{
+  background:linear-gradient(135deg,rgba(16,185,129,0.15) 0%,rgba(59,130,246,0.1) 100%);
+  border:1px solid rgba(16,185,129,0.3);border-radius:16px;padding:28px 32px;
+  text-align:center;margin:20px 0;
+}
+.solution-box h2{font-size:1.5rem;font-weight:800;color:#fff;margin-bottom:16px}
+.sol-vals{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;margin-bottom:20px}
+.sol-val{padding:16px 24px;background:rgba(0,0,0,0.25);border-radius:10px;min-width:120px}
+.sol-val .sv-name{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px}
+.sol-val .sv-num{font-size:2rem;font-weight:800;font-family:'JetBrains Mono',monospace}
+.sol-val.x1 .sv-num{color:var(--cyan)}
+.sol-val.x2 .sv-num{color:var(--purple)}
+.sol-val.z .sv-num{color:var(--green)}
+.sol-checks{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+.sol-check{background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 18px;font-family:'JetBrains Mono',monospace;font-size:0.88rem;color:#a8b8cc}
+.sol-check span{color:var(--green)}
 
-        .simplex-table th, .simplex-table td {
-            padding: 14px 16px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            white-space: nowrap;
-        }
+/* ─── JOURNEY TABLE ─── */
+.journey{border-collapse:collapse;width:100%;border-radius:12px;overflow:hidden;margin-top:16px}
+.journey th{background:#060d1a;padding:12px 16px;text-align:center;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);border-bottom:1px solid var(--border2)}
+.journey td{padding:13px 16px;text-align:center;font-size:0.92rem;border-bottom:1px solid var(--border);background:var(--surface)}
+.journey tr:last-child td{background:rgba(16,185,129,0.1);font-weight:700;color:#6ee7b7}
+.journey .mono{font-family:'JetBrains Mono',monospace}
 
-        .simplex-table th { background: rgba(15, 23, 42, 0.6); font-weight: 600; }
-        .simplex-table thead tr:first-child th { background: rgba(0,0,0,0.4); border-bottom: 2px solid var(--border-color); }
-        
-        .zone-name { font-size: 0.8rem; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase; }
-        
-        .hl-col { background-color: var(--hl-enter) !important; color: #bae6fd; }
-        .hl-row { background-color: var(--hl-leave) !important; color: #fecaca; }
-        .hl-pivot {
-            background-color: var(--hl-pivot) !important;
-            font-weight: 700;
-            color: #fff;
-            box-shadow: inset 0 0 0 2px var(--pivot-border);
-            position: relative;
-            z-index: 10;
-        }
+/* ─── ROW OP BLOCK ─── */
+.row-op{
+  background:#060d1a;border:1px solid var(--border2);border-radius:10px;
+  padding:16px 18px;margin:10px 0;font-family:'JetBrains Mono',monospace;font-size:0.85rem;line-height:1.7;
+}
+.row-op .op-label{color:var(--amber);font-weight:600;margin-bottom:6px;font-size:0.8rem}
+.row-op .old{color:var(--muted)}
+.row-op .op{color:var(--purple)}
+.row-op .result{color:var(--green);font-weight:600}
+.row-op .divider{border:none;border-top:1px solid var(--border2);margin:8px 0}
 
-        /* Tooltips */
-        .tip { position: relative; cursor: help; text-decoration: underline dotted rgba(255,255,255,0.4); text-underline-offset: 4px; }
-        .tip:hover::after {
-            content: attr(data-tip);
-            position: absolute;
-            bottom: 125%; left: 50%; transform: translateX(-50%);
-            background: #000; color: #fff;
-            padding: 10px 14px; border-radius: 6px;
-            white-space: normal; width: max-content; max-width: 280px;
-            z-index: 1000; font-size: 0.9rem; line-height: 1.4;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
-            pointer-events: none;
-        }
-        .tip:hover::before {
-            content: ''; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-            border-width: 6px; border-style: solid; border-color: #000 transparent transparent transparent;
-            z-index: 1000; margin-bottom: -1px; pointer-events: none;
-        }
+/* ─── BOTTOM NAV STRIP ─── */
+#bottomnav{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 28px;border-top:1px solid var(--border);
+  background:rgba(10,15,30,0.8);flex-shrink:0;flex-wrap:wrap;
+}
+.nav-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--surface3);
+  cursor:pointer;border:none;transition:all 0.2s;flex-shrink:0;
+}
+.nav-dot.active{width:24px;border-radius:4px;background:var(--blue)}
+.nav-dot.visited{background:var(--surface3);opacity:0.8}
 
-        /* Editor inputs */
-        input[type="number"] {
-            background: rgba(15, 23, 42, 0.9);
-            border: 1px solid #475569;
-            color: #e2e8f0;
-            padding: 8px;
-            border-radius: 6px;
-            width: 70px;
-            text-align: center;
-            font-family: monospace;
-            font-size: 1rem;
-            transition: border-color 0.2s;
-        }
-        input[type="number"]:focus { outline: none; border-color: var(--accent-blue); }
-        .edit-table td, .edit-table th { border: none; text-align: left; padding: 10px; background: transparent; }
-        .edit-table { margin-bottom: 24px; }
-    </style>
+/* ─── INLINE HIGHLIGHT ─── */
+.hl{font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:4px;font-size:0.85em}
+.hl-b{background:var(--blue-dim);color:#7dd3fc}
+.hl-p{background:var(--purple-dim);color:#c4b5fd}
+.hl-g{background:var(--green-dim);color:#6ee7b7}
+.hl-a{background:var(--amber-dim);color:#fcd34d}
+.hl-c{background:var(--cyan-dim);color:var(--cyan)}
+.hl-r{background:var(--red-dim);color:#fca5a5}
+
+/* ─── TITLE SLIDE SPECIAL ─── */
+.title-hero{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:65vh;text-align:center;
+}
+.title-hero h1{font-size:2.8rem;font-weight:800;letter-spacing:-0.03em;line-height:1.1;margin-bottom:16px}
+.title-hero h1 .accent{
+  background:linear-gradient(90deg,var(--blue),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.title-hero p{font-size:1.1rem;color:var(--muted);max-width:520px;line-height:1.6;margin-bottom:32px}
+.chapter-pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chapter-pill{
+  background:var(--surface2);border:1px solid var(--border2);border-radius:100px;
+  padding:6px 16px;font-size:0.82rem;color:var(--muted);
+}
+
+/* ─── SCHEMA / LEGEND ─── */
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--muted)}
+.legend-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+</style>
 </head>
 <body>
 
-<div id="app">
-    <header class="glass-panel" style="margin-bottom:0; box-shadow:none; border-bottom-left-radius:0; border-bottom-right-radius:0; border-bottom:none;">
-        <h1>Simplex Method Visualizer</h1>
-        <p>An interactive, step-by-step guide to corner point linear optimization.</p>
-    </header>
-    
-    <div class="layout">
-        <div class="sidebar glass-panel">
-            <h2>Problem Definition (Standard Form)</h2>
-            <div id="problem-text"></div>
-            <button id="btn-edit" class="btn secondary" style="width:100%; margin-bottom:20px;" onclick="showEditor()">Edit Problem / Custom Data</button>
-            
-            <h2>Controls</h2>
-            <div class="controls">
-                <button id="btn-prev" class="btn secondary" onclick="goPrev()">&#9664; Prev</button>
-                <button id="btn-next" class="btn primary" onclick="goNext()">Next &#9654;</button>
-                <button id="btn-auto" class="btn secondary" onclick="toggleAuto()">Auto ▶</button>
-                <button id="btn-reset" class="btn secondary" onclick="goReset()">Reset</button>
-            </div>
-            
-            <div class="step-explanation">
-                <h3 id="step-title">Initialization</h3>
-                <p id="step-desc">Loading...</p>
-            </div>
-            
-            <div class="profit-display tip" data-tip="Current objective value Z, calculated dynamically based on variables in the basis.">
-                <div class="label">Current Profit (Z)</div>
-                <div class="value" id="profit-val">0</div>
-            </div>
-        </div>
-
-        <div class="main-content">
-             <div id="tableau-container" class="glass-panel table-wrapper">
-                 <table class="simplex-table" id="simplex-table">
-                     <!-- dynamically filled by JS -->
-                 </table>
-             </div>
-             
-             <div id="editor-container" class="glass-panel" style="display: none;">
-                 <h2>Edit LP Problem (Maximization)</h2>
-                 <p style="color:#94a3b8; margin-bottom: 20px;">Input your objective function coefficients and constraints below. Slacks will be added automatically.</p>
-                 
-                 <div style="margin-bottom: 20px; display:flex; gap:20px; background: rgba(0,0,0,0.2); padding:15px; border-radius:8px;">
-                     <label>Variables: <input type="number" id="edit-vars" min="2" max="5" onchange="buildEditorGrid()"></label>
-                     <label>Constraints: <input type="number" id="edit-cons" min="1" max="5" onchange="buildEditorGrid()"></label>
-                 </div>
-                 
-                 <div id="edit-matrix" class="table-wrapper"></div>
-                 
-                 <div style="display:flex; gap:12px; margin-top:20px;">
-                     <button class="btn primary" onclick="applyProblem()">Solve / Visualize</button>
-                     <button class="btn secondary" onclick="cancelEdit()">Cancel</button>
-                 </div>
-             </div>
-        </div>
-    </div>
+<!-- TOP BAR -->
+<div id="topbar">
+  <h1>Simplex <span>Walkthrough</span></h1>
+  <div id="progress-bar-wrap">
+    <div id="progress-track"><div id="progress-fill" style="width:0%"></div></div>
+    <div id="slide-counter">Slide 1 / 15</div>
+  </div>
+  <div class="top-nav">
+    <button id="btn-prev" onclick="go(-1)" disabled>← Prev</button>
+    <button id="btn-next" onclick="go(1)">Next →</button>
+  </div>
 </div>
 
+<!-- STAGE -->
+<div id="stage">
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 0 — TITLE -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide active" id="s0">
+<div class="slide-inner">
+<div class="title-hero">
+  <div class="badge badge-blue">Interactive Walkthrough</div>
+  <h1>The Simplex Method<br><span class="accent">A Complete Guide</span></h1>
+  <p>Step-by-step through every tableau, every row operation, every number — explained in plain English using a real factory problem.</p>
+  <div class="chapter-pills">
+    <span class="chapter-pill">🏭 Factory Problem</span>
+    <span class="chapter-pill">📐 Standard Form</span>
+    <span class="chapter-pill">📊 Tableau Architecture</span>
+    <span class="chapter-pill">🔄 3 Iterations</span>
+    <span class="chapter-pill">✅ Optimal Solution</span>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 1 — THE PROBLEM -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s1">
+<div class="slide-inner">
+  <div class="badge badge-blue">Chapter 1</div>
+  <div class="slide-title">The Factory Problem</div>
+  <div class="slide-sub">Before any math — let's understand what we're actually solving.</div>
+
+  <div class="callout callout-amber">
+    <span class="callout-icon">🏭</span>
+    <div>You run a small furniture factory. You make <strong>chairs (x₁)</strong> and <strong>tables (x₂)</strong>. Your goal: <strong>maximize total profit</strong>.</div>
+  </div>
+
+  <div class="cards cards-2" style="margin-top:16px">
+    <div class="card">
+      <div class="card-title" style="color:var(--cyan)">🪑 Chairs (x₁)</div>
+      <p>Each chair earns <strong>$3 profit</strong>. Relatively quick to make.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--purple)">🪑 Tables (x₂)</div>
+      <p>Each table earns <strong>$5 profit</strong>. More valuable but uses more wood.</p>
+    </div>
+  </div>
+
+  <div class="section-head">Physical Constraints</div>
+  <div class="cards cards-2">
+    <div class="card">
+      <div class="card-title" style="color:var(--amber)">🪵 Wood Constraint</div>
+      <div class="math-block" style="font-size:0.88rem;padding:12px">x₁ + 2x₂ ≤ 8</div>
+      <p>You have <strong>8 units of wood</strong>. A chair uses 1 unit, a table uses 2 units. Tables are more wood-intensive.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--green)">⏱ Labor Constraint</div>
+      <div class="math-block" style="font-size:0.88rem;padding:12px">x₁ + x₂ ≤ 5</div>
+      <p>You have <strong>5 labor-hours</strong>. Each product (chair or table) takes exactly 1 hour to make.</p>
+    </div>
+  </div>
+
+  <div class="section-head">The Objective</div>
+  <div class="math-block amber">Maximize Z = 3x₁ + 5x₂</div>
+  <p style="color:var(--muted);font-size:0.92rem">The Simplex Method will walk us from <strong style="color:var(--text)">"produce nothing"</strong> → <strong style="color:var(--green)">the most profitable corner</strong> of the feasible region, step by step.</p>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 2 — STANDARD FORM -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+<div class="slide-inner">
+  <div class="badge badge-purple">Chapter 2</div>
+  <div class="slide-title">Standard Form: Adding Slack Variables</div>
+  <div class="slide-sub">The Simplex Method needs <em>equalities</em>, not inequalities. We convert by adding <strong>slack variables</strong> — variables that represent unused resources.</div>
+
+  <div class="two-col">
+    <div>
+      <div class="section-head">Wood Constraint</div>
+      <div class="math-block">x₁ + 2x₂  ≤  8</div>
+      <div style="text-align:center;color:var(--muted);font-size:1.3rem;margin:4px 0">↓ add s₁</div>
+      <div class="math-block green">x₁ + 2x₂ + s₁  =  8</div>
+      <div class="explain">
+        <div class="explain-title" style="color:var(--green)">What is s₁?</div>
+        <ul class="explain-list">
+          <li><strong>s₁ = units of wood NOT used</strong> (leftover wood)</li>
+          <li>If x₁=0, x₂=0: <span class="val">s₁ = 8</span> — all wood is idle</li>
+          <li>If x₂=2 tables: <span class="val">s₁ = 8 − 4 = 4</span> — 4 units still unused</li>
+          <li>s₁ earns <strong>$0 profit</strong> — idle resources earn nothing</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="section-head">Labor Constraint</div>
+      <div class="math-block">x₁ + x₂  ≤  5</div>
+      <div style="text-align:center;color:var(--muted);font-size:1.3rem;margin:4px 0">↓ add s₂</div>
+      <div class="math-block green">x₁ + x₂ + s₂  =  5</div>
+      <div class="explain">
+        <div class="explain-title" style="color:var(--green)">What is s₂?</div>
+        <ul class="explain-list">
+          <li><strong>s₂ = labor-hours NOT used</strong> (idle labor)</li>
+          <li>If nothing is produced: <span class="val">s₂ = 5</span> — all hours idle</li>
+          <li>If 3 products are made: <span class="val">s₂ = 5 − 3 = 2</span></li>
+          <li>s₂ earns <strong>$0 profit</strong> — idle workers earn nothing</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head">Complete System in Standard Form</div>
+  <div class="math-block purple">Maximize:    Z  = 3x₁ + 5x₂ + 0s₁ + 0s₂
+
+Subject to:  x₁ + 2x₂ + s₁       = 8
+             x₁ +  x₂       + s₂  = 5
+
+             x₁, x₂, s₁, s₂  ≥  0</div>
+
+  <div class="callout callout-blue">
+    <span class="callout-icon">💡</span>
+    <div>We now have <strong>4 variables</strong> and <strong>2 constraints</strong>. At any corner point, exactly <strong>2 variables are active</strong> (in the basis) and 2 are zero. The Simplex Method moves between corners.</div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 3 — TABLEAU ARCHITECTURE -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+<div class="slide-inner">
+  <div class="badge badge-cyan">Chapter 3</div>
+  <div class="slide-title">Tableau Architecture</div>
+  <div class="slide-sub">The tableau is a compact grid that tracks everything: what we produce, how much resource each unit uses, and whether we can still improve profit.</div>
+
+  <div class="tableau-wrap">
+  <table class="stab">
+    <thead>
+      <tr>
+        <th colspan="2">Zone</th><th>Name</th><th colspan="4">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="color:var(--blue)">Top Row</td><td class="mono">Cⱼ</td><td>Profit Coefficients</td><td colspan="4">Raw profit per unit of each variable (from objective function)</td></tr>
+      <tr><td style="color:var(--amber)">Left Col</td><td class="mono">C_B</td><td>Basis Profits</td><td colspan="4">Profit of variables currently active (currently "producing")</td></tr>
+      <tr><td style="color:var(--purple)">Mid Col</td><td class="mono">Basis</td><td>Active Variables</td><td colspan="4">Names of variables currently in the basis (non-zero)</td></tr>
+      <tr><td style="color:var(--text)">Center</td><td class="mono">Body</td><td>Resource Matrix</td><td colspan="4">How much of each resource one unit of each variable consumes</td></tr>
+      <tr><td style="color:var(--green)">Right Col</td><td class="mono">Qty</td><td>Current Values</td><td colspan="4">Current resource balance / value of each basic variable</td></tr>
+      <tr><td style="color:var(--cyan)">Bot Row 1</td><td class="mono">Zⱼ</td><td>Opportunity Cost</td><td colspan="4">Profit LOST from current basis by diverting resources to column j</td></tr>
+      <tr><td style="color:var(--red)">Bot Row 2</td><td class="mono">Cⱼ−Zⱼ</td><td>Net Evaluation</td><td colspan="4">Raw profit MINUS opportunity cost. <strong>Positive = still improvable!</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="section-head" style="margin-top:20px">Color Legend Used Throughout</div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--hl-col)"></div> Pivot Column (entering variable)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--hl-row)"></div> Pivot Row (leaving variable)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--hl-pivot)"></div> Pivot Element (the intersection)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--green-dim);border:1px solid rgba(16,185,129,0.3)"></div> Positive Cⱼ−Zⱼ (profitable)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--red-dim);border:1px solid rgba(239,68,68,0.3)"></div> Negative Cⱼ−Zⱼ (costly)</div>
+  </div>
+
+  <div class="callout callout-purple" style="margin-top:14px">
+    <span class="callout-icon">📍</span>
+    <div><strong>Key idea:</strong> Each row of the table represents ONE constraint. The Basis column tells you which variable "owns" that row. The Qty column tells you its current value.</div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 4 — ITERATION 0: INITIAL TABLEAU -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s4">
+<div class="slide-inner">
+  <div class="badge badge-amber">Iteration 0</div>
+  <div class="slide-title">The Initial Tableau</div>
+  <div class="slide-sub">We start at the origin — produce nothing. x₁ = 0, x₂ = 0. All resources are unused. This is corner point (0, 0).</div>
+
+  <div class="tableau-wrap">
+  <table class="stab">
+    <thead>
+      <tr>
+        <th colspan="3">Cⱼ →</th>
+        <th style="color:var(--cyan)">3</th><th style="color:var(--purple)">5</th>
+        <th style="color:var(--muted)">0</th><th style="color:var(--muted)">0</th>
+        <th></th>
+      </tr>
+      <tr>
+        <th>C_B</th><th>Basis</th><th>Zone</th>
+        <th>x₁</th><th>x₂</th><th>s₁</th><th>s₂</th><th>Qty</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="cb-col">0</td><td class="basis-col">s₁</td><td style="color:var(--muted);font-size:0.75rem">Wood</td>
+        <td>1</td><td>2</td><td>1</td><td>0</td><td style="color:var(--green);font-weight:700">8</td>
+      </tr>
+      <tr>
+        <td class="cb-col">0</td><td class="basis-col">s₂</td><td style="color:var(--muted);font-size:0.75rem">Labor</td>
+        <td>1</td><td>1</td><td>0</td><td>1</td><td style="color:var(--green);font-weight:700">5</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="zj-row"><td colspan="3">Zⱼ</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+      <tr class="cjzj-row">
+        <td colspan="3">Cⱼ − Zⱼ</td>
+        <td class="highlight-pos">3</td><td class="highlight-pos">5</td>
+        <td class="highlight-zero">0</td><td class="highlight-zero">0</td><td></td>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+
+  <div class="callout callout-blue" style="margin-top:14px">
+    <span class="callout-icon">📍</span>
+    <div>We are at corner point <strong>(0, 0)</strong>. No chairs, no tables. Both slacks are in the basis — all resources are idle. Profit Z = $0.</div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 5 — INITIAL TABLEAU: NUMBERS EXPLAINED -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s5">
+<div class="slide-inner">
+  <div class="badge badge-amber">Iteration 0 — Deep Dive</div>
+  <div class="slide-title">Every Number in the Initial Tableau</div>
+
+  <div class="two-col">
+    <div>
+      <div class="section-head">Cⱼ Row (Top Header)</div>
+      <ul class="explain-list">
+        <li><strong>Cⱼ = 3 under x₁:</strong> Each chair earns $3 raw profit from the objective function.</li>
+        <li><strong>Cⱼ = 5 under x₂:</strong> Each table earns $5 raw profit.</li>
+        <li><strong>Cⱼ = 0 under s₁, s₂:</strong> Idle resources earn nothing. Slack variables have zero profit.</li>
+      </ul>
+
+      <div class="section-head">C_B Column (Left)</div>
+      <ul class="explain-list">
+        <li><strong>C_B = 0 for s₁:</strong> Unused wood is in the basis — it earns $0.</li>
+        <li><strong>C_B = 0 for s₂:</strong> Idle labor is in the basis — it earns $0.</li>
+        <li>This entire column is 0 because we're making nothing and earning nothing.</li>
+      </ul>
+
+      <div class="section-head">Zⱼ Row (Opportunity Cost)</div>
+      <div class="math-block" style="font-size:0.82rem;padding:12px">Zⱼ = Σ (C_B × column value)
+
+Z(x₁) = (0)(1) + (0)(1) = 0
+Z(x₂) = (0)(2) + (0)(1) = 0
+Z(s₁) = (0)(1) + (0)(0) = 0
+Z(s₂) = (0)(0) + (0)(1) = 0</div>
+      <p style="font-size:0.88rem;color:var(--muted)">All zeros because C_B is all zeros. We earn nothing now, so we lose nothing by switching.</p>
+    </div>
+    <div>
+      <div class="section-head">Body — Wood Row (s₁ row)</div>
+      <ul class="explain-list">
+        <li><strong>1 under x₁:</strong> 1 chair uses <em>1 unit of wood</em></li>
+        <li><strong>2 under x₂:</strong> 1 table uses <em>2 units of wood</em> — more intensive</li>
+        <li><strong>1 under s₁:</strong> Identity coefficient — s₁ is basic in this row</li>
+        <li><strong>0 under s₂:</strong> Idle labor doesn't consume wood</li>
+        <li><strong>Qty = 8:</strong> All 8 units of wood are currently <em>idle</em> (s₁ = 8)</li>
+      </ul>
+
+      <div class="section-head">Body — Labor Row (s₂ row)</div>
+      <ul class="explain-list">
+        <li><strong>1 under x₁:</strong> 1 chair uses <em>1 labor-hour</em></li>
+        <li><strong>1 under x₂:</strong> 1 table uses <em>1 labor-hour</em></li>
+        <li><strong>0 under s₁:</strong> Idle wood doesn't consume labor</li>
+        <li><strong>1 under s₂:</strong> Identity coefficient — s₂ is basic here</li>
+        <li><strong>Qty = 5:</strong> All 5 labor-hours are currently <em>idle</em> (s₂ = 5)</li>
+      </ul>
+
+      <div class="section-head">Cⱼ−Zⱼ Row (Net Evaluation)</div>
+      <ul class="explain-list">
+        <li><strong class="hl hl-g">+3 for x₁:</strong> Making a chair nets $3. Worth doing!</li>
+        <li><strong class="hl hl-g">+5 for x₂:</strong> Making a table nets $5. Even better!</li>
+        <li><strong>0 for s₁, s₂:</strong> No benefit from idling resources.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 6 — STEP B: ENTERING VARIABLE (ITER 0) -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s6">
+<div class="slide-inner">
+  <div class="badge badge-cyan">Step B — Iteration 0</div>
+  <div class="slide-title">Choosing the Entering Variable</div>
+  <div class="slide-sub">Look at the Net Evaluation row (Cⱼ − Zⱼ). Pick the <strong>most positive</strong> value — that's the variable that adds the most profit per unit.</div>
+
+  <div class="tableau-wrap">
+  <table class="stab">
+    <thead>
+      <tr>
+        <th colspan="3">Cⱼ →</th>
+        <th>3</th><th class="hl-col">5</th><th>0</th><th>0</th><th></th>
+      </tr>
+      <tr><th>C_B</th><th>Basis</th><th>Zone</th><th>x₁</th><th class="hl-col">x₂ ↓</th><th>s₁</th><th>s₂</th><th>Qty</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="cb-col">0</td><td class="basis-col">s₁</td><td style="color:var(--muted);font-size:0.75rem">Wood</td>
+        <td>1</td><td class="hl-col">2</td><td>1</td><td>0</td><td>8</td></tr>
+      <tr><td class="cb-col">0</td><td class="basis-col">s₂</td><td style="color:var(--muted);font-size:0.75rem">Labor</td>
+        <td>1</td><td class="hl-col">1</td><td>0</td><td>1</td><td>5</td></tr>
+    </tbody>
+    <tfoot>
+      <tr class="zj-row"><td colspan="3">Zⱼ</td><td>0</td><td class="hl-col">0</td><td>0</td><td>0</td><td>0</td></tr>
+      <tr class="cjzj-row">
+        <td colspan="3">Cⱼ − Zⱼ</td>
+        <td class="highlight-pos">3</td>
+        <td class="hl-pivot" style="font-weight:800">★ 5</td>
+        <td class="highlight-zero">0</td><td class="highlight-zero">0</td><td></td>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+
+  <div class="callout callout-cyan" style="margin-top:16px">
+    <span class="callout-icon">🎯</span>
+    <div><strong>Net Evaluation Row: [3, 5, 0, 0]</strong><br>
+    The most positive value is <strong>5 under x₂</strong>. Tables earn the highest marginal profit gain per unit. <strong>x₂ is our entering variable. The x₂ column is the pivot column.</strong></div>
+  </div>
+
+  <div class="explain" style="margin-top:14px">
+    <div class="explain-title" style="color:var(--cyan)">Why x₂ and not x₁?</div>
+    <ul class="explain-list">
+      <li>Both x₁ and x₂ have positive Cⱼ−Zⱼ, so both could improve profit.</li>
+      <li>But x₂ gives <strong>+$5 net per unit</strong> vs x₁'s +$3 — tables are the better choice.</li>
+      <li>We've decided to <strong>start making tables</strong>. The next question: <em>how many tables can we make?</em></li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 7 — STEP C: RATIO TEST (ITER 0) -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s7">
+<div class="slide-inner">
+  <div class="badge badge-purple">Step C — Iteration 0</div>
+  <div class="slide-title">Ratio Test: Finding the Bottleneck</div>
+  <div class="slide-sub">Divide each row's Quantity by the x₂ pivot column value (only positive values). The <em>smallest ratio</em> tells us which resource runs out first.</div>
+
+  <div class="tableau-wrap">
+  <table class="stab">
+    <thead>
+      <tr><th>C_B</th><th>Basis</th><th>Zone</th><th>x₁</th><th class="hl-col">x₂ (pivot)</th><th>s₁</th><th>s₂</th><th>Qty</th><th style="color:var(--amber)">Ratio: Qty ÷ x₂</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="cb-col">0</td><td class="basis-col">s₁</td><td style="color:var(--muted);font-size:0.75rem">Wood</td>
+        <td>1</td><td class="hl-col">2</td><td>1</td><td>0</td><td>8</td>
+        <td style="color:var(--cyan);font-family:'JetBrains Mono',monospace">8 ÷ 2 = 4</td></tr>
+      <tr><td class="cb-col">0</td><td class="basis-col">s₂</td><td style="color:var(--muted);font-size:0.75rem">Labor</td>
+        <td>1</td><td class="hl-col">1</td><td>0</td><td>1</td><td>5</td>
+        <td style="color:var(--cyan);font-family:'JetBrains Mono',monospace">5 ÷ 1 = 5</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="ratio-table" style="margin-top:16px">
+    <div class="ratio-row winner">
+      <span class="label">Row 1 (Wood)</span>
+      <span class="calc">8 units of wood ÷ 2 wood per table</span>
+      <span class="result">= 4 tables max</span>
+      <span class="crown">👑 SMALLEST</span>
+    </div>
+    <div class="ratio-row">
+      <span class="label">Row 2 (Labor)</span>
+      <span class="calc">5 labor-hours ÷ 1 hour per table</span>
+      <span class="result">= 5 tables max</span>
+    </div>
+  </div>
+
+  <div class="callout callout-green" style="margin-top:14px">
+    <span class="callout-icon">⛏️</span>
+    <div><strong>Minimum ratio = 4 (Row 1 wins).</strong> Wood runs out first — after making 4 tables, all 8 wood units are gone (4 × 2 = 8). We still have labor left, but wood stops us at 4 tables.</div>
+  </div>
+
+  <div class="cards cards-3" style="margin-top:14px">
+    <div class="card">
+      <div class="card-title" style="color:var(--red)">Pivot Row</div>
+      <p><strong>Row 1 (s₁ row)</strong> — the wood constraint is the bottleneck.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--purple)">Pivot Element</div>
+      <p><strong>2</strong> — the value at the intersection of x₂ column and s₁ row. Means each table uses 2 wood.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--green)">Exchange</div>
+      <p><strong>s₁ leaves</strong> (wood fully used), <strong>x₂ enters</strong>. Move from (0,0) → (0,4).</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 8 — STEP D: ROW OPERATIONS (ITER 0) -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s8">
+<div class="slide-inner">
+  <div class="badge badge-purple">Step D — Iteration 0</div>
+  <div class="slide-title">Row Operations: Pivoting</div>
+  <div class="slide-sub">Two operations transform the tableau. Goal: make the pivot column have a <strong>1 in the pivot row</strong> and <strong>0 everywhere else</strong>.</div>
+
+  <div class="step-row">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <p><strong>Normalize the Pivot Row</strong> — Divide all elements of Row 1 by the pivot element (2). This makes the pivot element = 1.</p>
+    </div>
+  </div>
+
+  <div class="row-op">
+    <div class="op-label">New Row 1 = Old Row 1 ÷ 2</div>
+    <div class="old">Old Row 1:  [  1,    2,    1,    0  |   8 ]</div>
+    <div class="op">          ÷ 2 ÷ 2 ÷ 2 ÷ 2    ÷ 2</div>
+    <hr class="divider">
+    <div class="result">New Row 1:  [ 1/2,   1,   1/2,   0  |   4 ]</div>
+  </div>
+
+  <div class="callout callout-amber">
+    <span class="callout-icon">💬</span>
+    <div>Reading New Row 1: x₂ = 4. The RHS = <strong>4 is our key result</strong> — we can make exactly 4 tables. The ½ under x₁ means making 1 chair costs ½ table of wood capacity.</div>
+  </div>
+
+  <div class="step-row" style="margin-top:18px">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <p><strong>Eliminate x₂ from Row 2</strong> — Row 2 has a 1 in the x₂ column. Subtract 1 × New Row 1 from Old Row 2 to make it 0.</p>
+    </div>
+  </div>
+
+  <div class="row-op">
+    <div class="op-label">New Row 2 = Old Row 2 − (1) × New Row 1</div>
+    <div class="old">Old Row 2:        [  1,   1,   0,   1  |  5 ]</div>
+    <div class="op">− (1) × New R1:   [ 1/2,  1,  1/2,  0  |  4 ]</div>
+    <hr class="divider">
+    <div class="result">New Row 2:        [ 1/2,  0,  -1/2, 1  |  1 ]</div>
+  </div>
+
+  <div class="callout callout-green">
+    <span class="callout-icon">✅</span>
+    <div><strong>Verify the RHS:</strong> 4 tables use 4 labor-hours. We had 5. So <strong>1 labor-hour is still idle</strong> — exactly what the new Row 2 RHS = 1 shows. The algebra checks out!</div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 9 — ITERATION 1 TABLEAU + FULL EXPLANATION -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s9">
+<div class="slide-inner">
+  <div class="badge badge-green">Iteration 1</div>
+  <div class="slide-title">Updated Tableau — After First Pivot</div>
+  <div class="slide-sub">We've moved from corner (0, 0) to corner <strong>(0, 4)</strong>. Making 4 tables, 0 chairs. Profit has jumped from $0 to <strong>$20</strong>.</div>
+
+  <div class="tableau-wrap">
+  <table class="stab">
+    <thead>
+      <tr>
+        <th colspan="3">Cⱼ →</th>
+        <th style="color:var(--cyan)">3</th><th style="color:var(--purple)">5</th>
+        <th style="color:var(--muted)">0</th><th style="color:var(--muted)">0</th><th></th>
+      </tr>
+      <tr><th>C_B</th><th>Basis</th><th>Zone</th><th>x₁</th><th>x₂</th><th>s₁</th><th>s₂</th><th>Qty</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="cb-col" style="color:var(--purple)">5</td><td class="basis-col" style="color:var(--purple)">x₂</td>
+        <td style="color:var(--muted);font-size:0.75rem">Wood</td>
+        <td>1/2</td><td>1</td><td>1/2</td><td>0</td>
+        <td style="color:var(--green);font-weight:700">4</td>
+      </tr>
+      <tr>
+        <td class="cb-col">0</td><td class="basis-col">s₂</td>
+        <td style="color:var(--muted);font-size:0.75rem">Labor</td>
+        <td>1/2</td><td>0</td><td>-1/2</td><td>1</td>
+        <td style="color:var(--green);font-weight:700">1</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="zj-row"><td colspan="3">Zⱼ</td><td>5/2</td><td>5</td><td>5/2</td><td>0</td><td style="color:var(--green);font-weight:700">20</td></tr>
+      <tr class="cjzj-row">
+        <td colspan="3">Cⱼ − Zⱼ</td>
+        <td class="highlight-pos">+1/2</td>
+        <td class="highlight-zero">0</td>
+        <td class="highlight-neg">-5/2</td>
+        <td class="highlight-zero">0</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+
+  <div class="two-col" style="margin-top:16px">
+    <div>
+      <div class="section-head">Current Corner Point</div>
+      <div class="cards">
+        <div class="card" style="display:flex;gap:16px;flex-wrap:wrap">
+          <div><div class="card-title" style="color:var(--cyan)">x₁</div><div style="font-size:1.5rem;font-weight:700;font-family:'JetBrains Mono',monospace">0</div></div>
+          <div><div class="card-title" style="color:var(--purple)">x₂</div><div style="font-size:1.5rem;font-weight:700;font-family:'JetBrains Mono',monospace">4</div></div>
+          <div><div class="card-title" style="color:var(--amber)">s₁</div><div style="font-size:1.5rem;font-weight:700;font-family:'JetBrains Mono',monospace">0</div></div>
+          <div><div class="card-title" style="color:var(--green)">s₂</div><div style="font-size:1.5rem;font-weight:700;font-family:'JetBrains Mono',monospace">1</div></div>
+        </div>
+      </div>
+      <p style="margin-top:10px;font-size:0.88rem;color:var(--muted)">Making <strong style="color:var(--text)">4 tables, 0 chairs</strong>. Wood is fully used (s₁=0). 1 labor-hour still idle (s₂=1).</p>
+    </div>
+    <div>
+      <div class="section-head">Zⱼ Calculation Check</div>
+      <div class="math-block" style="font-size:0.82rem;padding:12px">Z(x₁) = (5)(½) + (0)(½) = 2.5  → costs $2.50 opp.
+Z(x₂) = (5)(1)  + (0)(0)  = 5.0  → already in basis
+Z(s₁) = (5)(½)  + (0)(-½) = 2.5  → idling wood costs $2.50
+Z(s₂) = (5)(0)  + (0)(1)  = 0.0  → idle labor free
+Z(RHS)= (5)(4)  + (0)(1)  = 20   → profit = $20 ✓</div>
+    </div>
+  </div>
+
+  <div class="callout callout-blue" style="margin-top:8px">
+    <span class="callout-icon">💡</span>
+    <div><strong>Cⱼ−Zⱼ for x₁ = +0.5:</strong> A chair earns $3 but costs $2.50 in opportunity (fewer tables due to wood competition). Net gain = <strong>$0.50 per chair — still positive! We can improve further.</strong></div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 10 — ITERATION 1 BODY DEEP DIVE -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s10">
+<div class="slide-inner">
+  <div class="badge badge-green">Iteration 1 — Deep Dive</div>
+  <div class="slide-title">Understanding the Body Coefficients</div>
+  <div class="slide-sub">Every number in the updated body has a precise physical meaning — let's unpack them all.</div>
+
+  <div class="two-col">
+    <div>
+      <div class="section-head">Row 1: x₂ row (Wood/Table row)</div>
+      <ul class="explain-list">
+        <li><strong>½ under x₁:</strong> Introducing 1 chair <em>reduces table production by ½</em>. Why? A chair uses 1 wood. Each wood unit is worth ½ table (tables use 2 wood each). So: 1 chair = ½ fewer tables via wood.</li>
+        <li><strong>1 under x₂:</strong> Identity — x₂ is basic in this row.</li>
+        <li><strong>½ under s₁:</strong> Every unit of wood we leave idle costs ½ table of production. Idling wood is expensive!</li>
+        <li><strong>0 under s₂:</strong> Idle labor doesn't affect the wood/table row directly.</li>
+        <li><strong>RHS = 4:</strong> We are currently making <em>4 tables</em>.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="section-head">Row 2: s₂ row (Labor row)</div>
+      <ul class="explain-list">
+        <li><strong>½ under x₁:</strong> Each chair uses 1 labor-hour directly, BUT making a chair also displaces ½ table (wood row), and each dropped table frees ½ labor-hour. Net = 1 − ½ = <em>½ hour per chair</em>. Chairs are cheaper in labor than they seem!</li>
+        <li><strong>0 under x₂:</strong> x₂ was fully substituted out — tables no longer appear in the labor row explicitly.</li>
+        <li><strong>−½ under s₁:</strong> Leaving 1 more wood idle → make ½ fewer tables → free up ½ labor-hour. So more idle wood leads to more idle labor (they move together).</li>
+        <li><strong>1 under s₂:</strong> Identity — s₂ is basic here.</li>
+        <li><strong>RHS = 1:</strong> <em>1 labor-hour is still idle</em>. After making 4 tables (using 4 hours), 1 hour remains unused.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout callout-purple" style="margin-top:8px">
+    <span class="callout-icon">🔬</span>
+    <div><strong>Shadow Price of Wood:</strong> Z(s₁) = 2.5, so Cⱼ−Zⱼ(s₁) = −2.5. This means each unit of wood we idle costs us $2.50 of profit. Turning this around: <strong>each additional unit of wood is worth $2.50 to our factory</strong>.</div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 11 — STEP B+C: ITER 1 ENTERING & RATIO -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s11">
+<div class="slide-inner">
+  <div class="badge badge-cyan">Steps B & C — Iteration 1</div>
+  <div class="slide-title">Entering Variable & Ratio Test</div>
+  <div class="slide-sub">Only x₁ still has a positive Cⱼ−Zⱼ = +0.5. We should make some chairs. But how many?</div>
+
+  <div class="tableau-wrap">
+  <table class="stab">
+    <thead>
+      <tr>
+        <th colspan="3">Cⱼ →</th>
+        <th class="hl-col">3</th><th>5</th><th>0</th><th>0</th><th></th><th style="color:var(--amber)">Ratio</th>
+      </tr>
+      <tr><th>C_B</th><th>Basis</th><th>Zone</th><th class="hl-col">x₁ ↓</th><th>x₂</th><th>s₁</th><th>s₂</th><th>Qty</th><th style="color:var(--amber)">Qty ÷ x₁</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="cb-col" style="color:var(--purple)">5</td><td class="basis-col">x₂</td><td style="color:var(--muted);font-size:0.75rem">Wood</td>
+        <td class="hl-col">1/2</td><td>1</td><td>1/2</td><td>0</td><td>4</td>
+        <td style="font-family:'JetBrains Mono',monospace;color:var(--cyan)">4 ÷ ½ = 8</td></tr>
+      <tr><td class="cb-col">0</td><td class="basis-col">s₂</td><td style="color:var(--muted);font-size:0.75rem">Labor</td>
+        <td class="hl-pivot">1/2</td><td>0</td><td>-1/2</td><td>1</td><td>1</td>
+        <td style="font-family:'JetBrains Mono',monospace;color:var(--green);font-weight:700">1 ÷ ½ = 2 👑</td></tr>
+    </tbody>
+    <tfoot>
+      <tr class="cjzj-row">
+        <td colspan="3">Cⱼ − Zⱼ</td>
+        <td class="hl-pivot" style="font-weight:800">★ +1/2</td>
+        <td class="highlight-zero">0</td><td class="highlight-neg">-5/2</td><td class="highlight-zero">0</td><td></td><td></td>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+
+  <div class="ratio-table" style="margin-top:14px">
+    <div class="ratio-row">
+      <span class="label">Row 1 (x₂)</span>
+      <span class="calc">4 tables ÷ ½ wood-per-chair-trade-off</span>
+      <span class="result">= 8 chairs max (if only wood mattered)</span>
+    </div>
+    <div class="ratio-row winner">
+      <span class="label">Row 2 (s₂)</span>
+      <span class="calc">1 idle hour ÷ ½ hour per chair (net)</span>
+      <span class="result">= 2 chairs max</span>
+      <span class="crown">👑 BOTTLENECK</span>
+    </div>
+  </div>
+
+  <div class="cards cards-3" style="margin-top:14px">
+    <div class="card">
+      <div class="card-title" style="color:var(--cyan)">Entering Variable</div>
+      <p><strong>x₁ (chairs)</strong> — only positive Cⱼ−Zⱼ remaining (+0.5)</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--red)">Leaving Variable</div>
+      <p><strong>s₂ (idle labor)</strong> — Row 2 has smallest ratio (2). All idle labor will be consumed.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--purple)">Pivot Element</div>
+      <p><strong>½</strong> at Row 2 × x₁ column. Moving from corner (0,4) → (2,3).</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 12 — STEP D: ROW OPS ITER 1 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s12">
+<div class="slide-inner">
+  <div class="badge badge-purple">Step D — Iteration 1</div>
+  <div class="slide-title">Row Operations for Second Pivot</div>
+  <div class="slide-sub">Normalize the pivot row (Row 2), then eliminate x₁ from Row 1.</div>
+
+  <div class="step-row">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <p><strong>Normalize Row 2</strong> — Divide by pivot element (½) = multiply by 2.</p>
+    </div>
+  </div>
+
+  <div class="row-op">
+    <div class="op-label">New Row 2 = Old Row 2 ÷ (½) = Old Row 2 × 2</div>
+    <div class="old">Old Row 2:  [ 1/2,  0,  -1/2,  1  |  1 ]</div>
+    <div class="op">          ×2  ×2   ×2    ×2   ×2</div>
+    <hr class="divider">
+    <div class="result">New Row 2:  [  1,   0,   -1,   2  |  2 ]</div>
+  </div>
+
+  <div class="callout callout-cyan">
+    <span class="callout-icon">💬</span>
+    <div><strong>Reading New Row 2:</strong> x₁ = 2 chairs. The −1 under s₁ means getting 1 more wood unit enables 1 more chair. The 2 under s₂ means getting 1 more labor-hour enables 2 more chairs.</div>
+  </div>
+
+  <div class="step-row" style="margin-top:18px">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <p><strong>Eliminate x₁ from Row 1</strong> — Row 1 has ½ in x₁ column. Subtract (½) × New Row 2.</p>
+    </div>
+  </div>
+
+  <div class="row-op">
+    <div class="op-label">New Row 1 = Old Row 1 − (½) × New Row 2</div>
+    <div class="old">Old Row 1:         [ 1/2,  1,   1/2,  0  |  4 ]</div>
+    <div class="op">− (½) × New R2:    [ 1/2,  0,  -1/2,  1  |  1 ]</div>
+    <hr class="divider">
+    <div class="result">New Row 1:         [  0,   1,    1,  -1  |  3 ]</div>
+  </div>
+
+  <div class="callout callout-green">
+    <span class="callout-icon">✅</span>
+    <div><strong>Verify:</strong> With 2 chairs and x₂ tables: wood constraint = 1(2) + 2x₂ = 8 → x₂ = 3. ✓ Labor: 1(2) + 1(3) = 5. ✓ Both constraints are now <strong>fully binding</strong>!</div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 13 — ITERATION 2: FINAL TABLEAU -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s13">
+<div class="slide-inner">
+  <div class="badge badge-green">Iteration 2 — Final</div>
+  <div class="slide-title">The Final Tableau</div>
+  <div class="slide-sub">We've moved to corner <strong>(2, 3)</strong>. Making 2 chairs and 3 tables. Both wood and labor are completely exhausted. Is this optimal?</div>
+
+  <div class="tableau-wrap">
+  <table class="stab">
+    <thead>
+      <tr>
+        <th colspan="3">Cⱼ →</th>
+        <th style="color:var(--cyan)">3</th><th style="color:var(--purple)">5</th>
+        <th style="color:var(--muted)">0</th><th style="color:var(--muted)">0</th><th></th>
+      </tr>
+      <tr><th>C_B</th><th>Basis</th><th>Zone</th><th>x₁</th><th>x₂</th><th>s₁</th><th>s₂</th><th>Qty</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="cb-col" style="color:var(--purple)">5</td><td class="basis-col" style="color:var(--purple)">x₂</td>
+        <td style="color:var(--muted);font-size:0.75rem">Wood</td>
+        <td>0</td><td>1</td><td>1</td><td>-1</td>
+        <td style="color:var(--green);font-weight:700">3</td>
+      </tr>
+      <tr>
+        <td class="cb-col" style="color:var(--cyan)">3</td><td class="basis-col" style="color:var(--cyan)">x₁</td>
+        <td style="color:var(--muted);font-size:0.75rem">Labor</td>
+        <td>1</td><td>0</td><td>-1</td><td>2</td>
+        <td style="color:var(--green);font-weight:700">2</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="zj-row"><td colspan="3">Zⱼ</td><td>3</td><td>5</td><td>2</td><td>1</td><td style="color:var(--green);font-weight:700">21</td></tr>
+      <tr class="cjzj-row">
+        <td colspan="3">Cⱼ − Zⱼ</td>
+        <td class="highlight-zero">0</td>
+        <td class="highlight-zero">0</td>
+        <td class="highlight-neg">−2</td>
+        <td class="highlight-neg">−1</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+
+  <div class="two-col" style="margin-top:16px">
+    <div>
+      <div class="section-head">Resource Check</div>
+      <div class="math-block green" style="font-size:0.82rem;padding:12px">Wood:  1(2) + 2(3) = 2 + 6 = 8/8  ✓ Full
+Labor: 1(2) + 1(3) = 2 + 3 = 5/5  ✓ Full
+
+Both s₁ = 0 and s₂ = 0
+→ Every resource is exhausted!</div>
+    </div>
+    <div>
+      <div class="section-head">Zⱼ Verification</div>
+      <div class="math-block" style="font-size:0.82rem;padding:12px">Z(x₁) = (5)(0)+(3)(1) = 3   → Cj-Zj = 0
+Z(x₂) = (5)(1)+(3)(0) = 5   → Cj-Zj = 0
+Z(s₁) = (5)(1)+(3)(-1)= 2   → Cj-Zj = -2
+Z(s₂) = (5)(-1)+(3)(2)= 1   → Cj-Zj = -1
+Z(RHS)= (5)(3)+(3)(2) = 21  ✓</div>
+    </div>
+  </div>
+
+  <div class="callout callout-green">
+    <span class="callout-icon">🏁</span>
+    <div><strong>All Cⱼ−Zⱼ ≤ 0!</strong> Every entry is zero or negative. No variable can improve profit. <strong>This is the optimal solution.</strong></div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 14 — FINAL TABLEAU DEEP DIVE -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s14">
+<div class="slide-inner">
+  <div class="badge badge-green">Iteration 2 — Deep Dive</div>
+  <div class="slide-title">Final Tableau: Every Number Explained</div>
+
+  <div class="two-col">
+    <div>
+      <div class="section-head">Row 1 (x₂ row — Tables are basic)</div>
+      <ul class="explain-list">
+        <li><strong>0 under x₁:</strong> Chairs have been algebraically substituted out. This row purely describes table production.</li>
+        <li><strong>1 under x₂:</strong> Identity — x₂ is basic here.</li>
+        <li><strong>1 under s₁:</strong> If we relax wood (+1 unit), we gain 1 more table. <em>Shadow price: 1 table per wood unit.</em></li>
+        <li><strong>−1 under s₂:</strong> If we could use 1 extra labor-hour (reduce idle labor), we'd gain 1 more table. The − sign shows more labor → more tables.</li>
+        <li><strong>RHS = 3:</strong> Making <em>3 tables</em>.</li>
+      </ul>
+
+      <div class="section-head">Row 2 (x₁ row — Chairs are basic)</div>
+      <ul class="explain-list">
+        <li><strong>1 under x₁:</strong> Identity — x₁ is basic here.</li>
+        <li><strong>0 under x₂:</strong> Tables handled by Row 1.</li>
+        <li><strong>−1 under s₁:</strong> +1 wood → +1 table (from Row 1) → uses 1 labor → 1 fewer chair. Net: more wood = fewer chairs (they shift to tables).</li>
+        <li><strong>2 under s₂:</strong> Getting 1 more labor-hour enables 2 more chairs (because chairs are relatively labor-efficient at this corner).</li>
+        <li><strong>RHS = 2:</strong> Making <em>2 chairs</em>.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="section-head">Shadow Prices (What Extra Resources Are Worth)</div>
+      <div class="callout callout-amber" style="margin-bottom:12px">
+        <span class="callout-icon">🪵</span>
+        <div><strong>Wood Shadow Price = $2</strong><br>
+        Cⱼ−Zⱼ(s₁) = −2. Each extra unit of wood enables +1 table (worth $5) but costs −1 chair (worth −$3). Net = <strong>+$2 per extra wood unit</strong>.<br>
+        Verify: 9 wood instead of 8 → +1 table − 1 chair = +$5 − $3 = +$2 ✓</div>
+      </div>
+      <div class="callout callout-green">
+        <span class="callout-icon">⏱</span>
+        <div><strong>Labor Shadow Price = $1</strong><br>
+        Cⱼ−Zⱼ(s₂) = −1. Each extra labor-hour enables +2 chairs − 1 table. Net = 2×$3 − 1×$5 = $6 − $5 = <strong>+$1 per extra hour</strong>.<br>
+        Verify: 6 hours instead of 5 → +2 chairs − 1 table = +$6 − $5 = +$1 ✓</div>
+      </div>
+
+      <div class="section-head">Optimality Confirmation</div>
+      <ul class="explain-list">
+        <li><strong>Cⱼ−Zⱼ(x₁) = 0:</strong> Chairs in basis, raw profit = opportunity cost. Perfectly balanced.</li>
+        <li><strong>Cⱼ−Zⱼ(x₂) = 0:</strong> Tables in basis, same logic.</li>
+        <li><strong>Cⱼ−Zⱼ(s₁) = −2:</strong> Idling wood loses $2. Don't do it.</li>
+        <li><strong>Cⱼ−Zⱼ(s₂) = −1:</strong> Idling labor loses $1. Don't do it.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SLIDE 15 — OPTIMAL SOLUTION & SUMMARY -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="slide" id="s15">
+<div class="slide-inner">
+  <div class="badge badge-green">Optimal Solution</div>
+  <div class="slide-title">The Answer & The Journey</div>
+
+  <div class="solution-box">
+    <h2>🏆 Optimal Solution Found</h2>
+    <div class="sol-vals">
+      <div class="sol-val x1">
+        <div class="sv-name">Chairs (x₁)</div>
+        <div class="sv-num">2</div>
+      </div>
+      <div class="sol-val x2">
+        <div class="sv-name">Tables (x₂)</div>
+        <div class="sv-num">3</div>
+      </div>
+      <div class="sol-val z">
+        <div class="sv-name">Max Profit (Z)</div>
+        <div class="sv-num">$21</div>
+      </div>
+    </div>
+    <div class="sol-checks">
+      <div class="sol-check">Wood: 1(2)+2(3) = <span>8/8 ✓</span></div>
+      <div class="sol-check">Labor: 1(2)+1(3) = <span>5/5 ✓</span></div>
+    </div>
+  </div>
+
+  <div class="section-head">The Journey Through the Feasible Region</div>
+  <div class="tableau-wrap">
+  <table class="journey">
+    <thead>
+      <tr>
+        <th>Iteration</th><th>Corner Point</th><th>x₁ (Chairs)</th><th>x₂ (Tables)</th><th>Profit Z</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Start</td><td class="mono">(0, 0)</td>
+        <td class="mono">0</td><td class="mono">0</td>
+        <td class="mono" style="color:var(--muted)">$0</td>
+        <td>Produce nothing</td>
+      </tr>
+      <tr>
+        <td>After Iter 1</td><td class="mono">(0, 4)</td>
+        <td class="mono">0</td><td class="mono">4</td>
+        <td class="mono" style="color:var(--amber)">$20</td>
+        <td>Only tables</td>
+      </tr>
+      <tr>
+        <td>After Iter 2</td><td class="mono">(2, 3)</td>
+        <td class="mono">2</td><td class="mono">3</td>
+        <td class="mono">$21</td>
+        <td>🏆 Optimal</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout callout-purple" style="margin-top:16px">
+    <span class="callout-icon">🔑</span>
+    <div><strong>Why is (2,3) the best?</strong> At this corner, both constraints are <em>binding</em> (fully used). Every possible swap has been evaluated through the Cⱼ−Zⱼ row — every change either stays neutral or <em>reduces</em> profit. The opportunity costs have caught up with the raw profits. There is no free lunch left.<br><br>
+    The factory should produce <strong>2 chairs and 3 tables</strong> to earn the maximum possible profit of <strong>$21</strong>, fully utilizing all 8 wood units and all 5 labor-hours.</div>
+  </div>
+</div>
+</div>
+
+</div><!-- end stage -->
+
+<!-- BOTTOM DOTS NAV -->
+<div id="bottomnav"></div>
+
 <script>
-    // System formatting utils
-    function sub(str) {
-        return str.replace(/\d+/g, match => {
-            return match.split('').map(d => String.fromCharCode(8320 + parseInt(d))).join('');
-        });
-    }
+const TOTAL = 16; // slides 0-15
+let current = 0;
 
-    function formatNum(num) {
-        if (Math.abs(num) < 1e-8) return "0";
-        let s = num.toFixed(2);
-        if(s.endsWith(".00")) return parseInt(s).toString();
-        if(s.endsWith("0")) return s.slice(0, -1);
-        // prevent negative zero
-        if(s === "-0") return "0";
-        return s;
-    }
+function buildDots() {
+  const nav = document.getElementById('bottomnav');
+  for (let i = 0; i < TOTAL; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'nav-dot' + (i === 0 ? ' active' : '');
+    btn.title = 'Slide ' + (i+1);
+    btn.addEventListener('click', () => goTo(i));
+    nav.appendChild(btn);
+  }
+}
 
-    // Example Initial Problem
-    let currentProblem = {
-        numVars: 2,
-        numCons: 3,
-        c: [3, 5],
-        A: [
-            [1, 0],
-            [0, 2],
-            [3, 2]
-        ],
-        b: [4, 12, 18]
-    };
+function updateProgress() {
+  const pct = current / (TOTAL - 1) * 100;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('slide-counter').textContent = 'Slide ' + (current+1) + ' / ' + TOTAL;
+  document.getElementById('btn-prev').disabled = current === 0;
+  document.getElementById('btn-next').disabled = current === TOTAL - 1;
+  const dots = document.querySelectorAll('.nav-dot');
+  dots.forEach((d, i) => {
+    d.classList.remove('active', 'visited');
+    if (i === current) d.classList.add('active');
+    else if (i < current) d.classList.add('visited');
+  });
+}
 
-    let currentViews = [];
-    let currentStep = 0;
-    let autoInterval = null;
+function goTo(idx) {
+  if (idx === current) return;
+  const slides = document.querySelectorAll('.slide');
+  slides[current].classList.remove('active');
+  slides[current].classList.add('exiting');
+  setTimeout(() => slides[current].classList.remove('exiting'), 360);
+  current = idx;
+  slides[current].classList.add('active');
+  slides[current].scrollTop = 0;
+  updateProgress();
+}
 
-    // Convert to Standard Form with Slacks
-    function buildStandardForm(prob) {
-        let nV = prob.numVars;
-        let nC = prob.numCons;
-        let vars = [];
-        for(let i=0; i<nV; i++) vars.push('x' + (i+1));
-        for(let i=0; i<nC; i++) vars.push('s' + (i+1));
+function go(dir) {
+  const next = current + dir;
+  if (next >= 0 && next < TOTAL) goTo(next);
+}
 
-        let c = [...prob.c];
-        for(let i=0; i<nC; i++) c.push(0);
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(-1);
+});
 
-        let A = [];
-        let basis = [];
-        for(let i=0; i<nC; i++) {
-            let row = [...prob.A[i]];
-            for(let j=0; j<nC; j++) {
-                row.push(i === j ? 1 : 0);
-            }
-            A.push(row);
-            basis.push(nV + i);
-        }
+// Touch swipe
+let tx = 0;
+document.getElementById('stage').addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, {passive:true});
+document.getElementById('stage').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+}, {passive:true});
 
-        return { c, vars, A, b: [...prob.b], basis };
-    }
-
-    // Engine: Generates all views frame-by-frame
-    function generateViews(problem) {
-        let views = [];
-        let A = problem.A.map(row => [...row]);
-        let b = [...problem.b];
-        let c = [...problem.c];
-        let basis = [...problem.basis];
-        let vars = [...problem.vars];
-
-        // Safegaurd iter limits
-        for(let it=0; it<15; it++) {
-            let cb = basis.map(i => c[i]);
-            let z = 0;
-            for(let i=0; i<basis.length; i++) z += cb[i] * b[i];
-
-            let zj = [];
-            let cj_zj = [];
-            for(let j=0; j<vars.length; j++) {
-                let sum = 0;
-                for(let i=0; i<basis.length; i++) sum += cb[i] * A[i][j];
-                zj.push(sum);
-                cj_zj.push(c[j] - sum);
-            }
-
-            let isOptimal = cj_zj.every(v => v <= 1e-8);
-
-            let baseData = {
-                A: A.map(r=>[...r]), b: [...b], c: [...c], cb: [...cb], 
-                basis: [...basis], zj: [...zj], cj_zj: [...cj_zj], z: z, vars: [...vars]
-            };
-
-            if(isOptimal) {
-                views.push({
-                    ...baseData,
-                    title: "Status: Optimal Reached",
-                    explanation: "Check the Cⱼ − Zⱼ row. All values are ≤ 0! This indicates that introducing any new variable will strictly decrease our profit. We have found the absolute optimal corner point.",
-                    highlightCol: -1, highlightRow: -1, showRatios: false
-                });
-                break;
-            }
-
-            // Find Pivot Col (Most positive Cj-Zj)
-            let maxVal = 0, pCol = -1;
-            for(let j=0; j<cj_zj.length; j++) {
-                if(cj_zj[j] > maxVal + 1e-8) { maxVal = cj_zj[j]; pCol = j; }
-            }
-
-            if(it===0) {
-                 views.push({
-                    ...baseData,
-                    title: `Initial State`,
-                    explanation: `We begin at the origin. We produce no decision variables, so slacks act as our basis (unused resources). Total profit is 0.`,
-                    highlightCol: -1, highlightRow: -1, showRatios: false
-                });
-            }
-
-            views.push({
-                ...baseData,
-                title: `Iteration ${it+1}: Step B - Entering Variable`,
-                explanation: `Look at the Net Evaluation row (Cⱼ − Zⱼ). The highest positive number is ${formatNum(maxVal)} for column ${sub(vars[pCol])}. This implies making one unit of ${sub(vars[pCol])} adds the most profit margins. It becomes our Entering Variable (Pivot Column).`,
-                highlightCol: pCol, highlightRow: -1, showRatios: false
-            });
-
-            // Ratio test
-            let minRatio = Infinity, pRow = -1;
-            let ratios = [];
-            for(let i=0; i<b.length; i++) {
-                if(A[i][pCol] > 1e-8) {
-                    let r = b[i] / A[i][pCol];
-                    ratios.push(r);
-                    if(r < minRatio) { minRatio = r; pRow = i; }
-                } else {
-                    ratios.push(-1);
-                }
-            }
-
-            if(pRow === -1) {
-                views.push({
-                    ...baseData,
-                    title: `Status: Unbounded Problem`,
-                    explanation: `Variable ${sub(vars[pCol])} increases profit, but no constraint limits it (all values in its column are ≤ 0). We could theoretically produce an infinite amount making Profit = ∞!`,
-                    highlightCol: pCol, highlightRow: -1, showRatios: true, ratios: ratios
-                });
-                break;
-            }
-
-            views.push({
-                ...baseData,
-                title: `Iteration ${it+1}: Step C - Ratio Test & Leaving Var`,
-                explanation: `We do a Ratio Test (Quantity ÷ Pivot Column values) to find which resource becomes a bottleneck first. Row ${pRow+1} has the smallest positive ratio (${formatNum(minRatio)}). Thus, ${sub(vars[basis[pRow]])} leaves the basis. The intersection is our Pivot Element (${formatNum(A[pRow][pCol])}).`,
-                highlightCol: pCol, highlightRow: pRow, showRatios: true, ratios: ratios
-            });
-
-            views.push({
-                ...baseData,
-                title: `Iteration ${it+1}: Step D - Row Operations`,
-                explanation: `Prepare to pivot! Operation 1: Normalize the pivot row by dividing it by the pivot element. Operation 2: Eliminate all other values in the pivot column by subtracting multiples of the new pivot row from other rows. Click "Next" to execute the graphical transformation.`,
-                highlightCol: pCol, highlightRow: pRow, showRatios: true, ratios: ratios, isTransition: true
-            });
-
-            // Perform Math
-            let newA = A.map(r=>[...r]), newb = [...b];
-            let pVal = A[pRow][pCol];
-            for(let j=0; j<vars.length; j++) newA[pRow][j] = A[pRow][j]/pVal;
-            newb[pRow] = b[pRow]/pVal;
-            
-            for(let i=0; i<b.length; i++) {
-                if(i!==pRow) {
-                    let f = A[i][pCol];
-                    for(let j=0; j<vars.length; j++) newA[i][j] = A[i][j] - f*newA[pRow][j];
-                    newb[i] = b[i] - f*newb[pRow];
-                }
-            }
-            A = newA; b = newb; basis[pRow] = pCol;
-        }
-        return views;
-    }
-
-    function renderProblemDesc(prob) {
-        let stdProb = buildStandardForm(prob);
-        
-        let html = `<div class="math-block" style="color: #60a5fa"><strong>Max Z</strong> = `;
-        prob.c.forEach((cval, i) => {
-            if(i>0) html += ` + `;
-            html += `${cval}${sub('x'+(i+1))}`;
-        });
-        html += `</div><div class="math-block" style="color:#cbd5e1; font-size:1rem;"><strong>Subject to (Standard Form):</strong><br>`;
-        
-        prob.A.forEach((row, i) => {
-            row.forEach((val, j) => {
-                if(j>0) html += ` + `;
-                html += `${val}${sub('x'+(j+1))}`;
-            });
-            html += ` <span style="color:#a78bfa">+ 1${sub('s'+(i+1))}</span>`;
-            html += ` = ${prob.b[i]}<br>`;
-        });
-        html += `Variables &ge; 0</div>`;
-        document.getElementById('problem-text').innerHTML = html;
-    }
-
-    function renderTable(view) {
-        let thead = document.createElement('thead');
-        
-        // Row 1: Cj
-        let trCj = document.createElement('tr');
-        trCj.innerHTML = `<th colspan="3" class="zone-name tip" data-tip="C_j: The raw profit contribution per unit of each variable from your original objective function.">Cⱼ (Coefficients)</th>`;
-        view.vars.forEach((v, idx) => {
-            trCj.innerHTML += `<th>${formatNum(view.c[idx])}</th>`;
-        });
-        trCj.innerHTML += `<th class="zone-name">-</th><th class="zone-name">-</th>`;
-        thead.appendChild(trCj);
-
-        // Row 2: Headers
-        let trH = document.createElement('tr');
-        trH.innerHTML = `
-            <th class="zone-name tip" data-tip="Visual map of table sections">Zone</th>
-            <th class="tip" data-tip="C_B: Coefficients of the variables currently forming the basis.">C_B</th>
-            <th class="tip" data-tip="Basis: System variables presently forming our corner point solution.">Basis</th>
-        `;
-        view.vars.forEach((v, idx) => {
-            let isCol = (idx === view.highlightCol);
-            let tip = v.startsWith('s') ? "Slack Variable. Added to turn ≤ into =. Denotes unused resource limits." : "Decision Variable. Denotes direct output volume being produced.";
-            trH.innerHTML += `<th class="tip ${isCol ? 'hl-col' : ''}" data-tip="${tip}">${sub(v)}</th>`;
-        });
-        trH.innerHTML += `
-            <th class="tip" data-tip="Quantity (RHS): The available unallocated resources, or value of a basic variable.">Quantity</th>
-            <th class="tip" data-tip="Ratio Check: Right Hand Side ÷ strict positive pivot column elements. Finds fastest-draining resource.">Ratio</th>
-        `;
-        thead.appendChild(trH);
-        
-        let tbody = document.createElement('tbody');
-        view.A.forEach((row, rIdx) => {
-            let tr = document.createElement('tr');
-            let isRow = (rIdx === view.highlightRow);
-            
-            tr.innerHTML = `
-                <td class="zone-name">Body</td>
-                <td>${formatNum(view.cb[rIdx])}</td>
-                <td style="font-weight: bold; color:white;">${sub(view.vars[view.basis[rIdx]])}</td>
-            `;
-            
-            row.forEach((val, cIdx) => {
-                let isCol = (cIdx === view.highlightCol);
-                let isPivot = isRow && isCol;
-                let cls = "";
-                if (isPivot) cls = "hl-pivot tip";
-                else if (isRow) cls = "hl-row";
-                else if (isCol) cls = "hl-col";
-                
-                let extra = isPivot ? ` data-tip="Pivot Element. Intersection. Will act as the divisor for row normalization."` : "";
-                tr.innerHTML += `<td class="${cls}"${extra}>${formatNum(val)}</td>`;
-            });
-            
-            tr.innerHTML += `<td class="${isRow?'hl-row':''}">${formatNum(view.b[rIdx])}</td>`;
-            
-            let ratioVal = (view.showRatios && view.ratios[rIdx] >= 0) ? formatNum(view.ratios[rIdx]) : "-";
-            tr.innerHTML += `<td class="${isRow?'hl-pivot':''}">${ratioVal}</td>`;
-            
-            tbody.appendChild(tr);
-        });
-
-        let tfoot = document.createElement('tfoot');
-        
-        // Zj
-        let trZj = document.createElement('tr');
-        trZj.innerHTML = `<td colspan="3" class="zone-name tip" style="color:#cbd5e1" data-tip="Z_j: Cost incurred by transferring resources from basic variables to produce a new variable unit.">Zⱼ (Opp. Cost)</td>`;
-        view.zj.forEach((val, cIdx) => {
-            let isCol = (cIdx === view.highlightCol);
-            trZj.innerHTML += `<td class="${isCol ? 'hl-col' : ''}">${formatNum(val)}</td>`;
-        });
-        trZj.innerHTML += `<td></td><td></td>`;
-        tfoot.appendChild(trZj);
-
-        // Cj - Zj
-        let trCjZj = document.createElement('tr');
-        trCjZj.innerHTML = `<td colspan="3" class="zone-name tip" style="color:#60a5fa" data-tip="C_j - Z_j: Raw Profit minus Opportunity Cost. Value > 0 signifies a profitable expansion!">Cⱼ − Zⱼ (Net Eval)</td>`;
-        view.cj_zj.forEach((val, cIdx) => {
-            let isCol = (cIdx === view.highlightCol);
-            let cls = isCol ? 'hl-pivot tip' : '';
-            trCjZj.innerHTML += `<td class="${cls}" ${isCol?'data-tip="Most positive Net Evaluation becomes pivot column."':''}>${formatNum(val)}</td>`;
-        });
-        trCjZj.innerHTML += `<td></td><td></td>`;
-        tfoot.appendChild(trCjZj);
-
-        const tbl = document.getElementById('simplex-table');
-        tbl.innerHTML = '';
-        tbl.appendChild(thead);
-        tbl.appendChild(tbody);
-        tbl.appendChild(tfoot);
-    }
-
-    function updateUI() {
-        document.getElementById('btn-prev').disabled = currentStep === 0;
-        document.getElementById('btn-next').disabled = currentStep === currentViews.length - 1;
-        
-        let view = currentViews[currentStep];
-        document.getElementById('step-title').innerText = view.title;
-        document.getElementById('step-desc').innerText = view.explanation;
-        
-        let profitEl = document.getElementById('profit-val');
-        profitEl.innerText = formatNum(view.z);
-        if (currentStep === currentViews.length - 1 && !view.unbounded) {
-            profitEl.style.color = "#86efac";
-            profitEl.innerText += " (Max!)";
-        } else {
-             profitEl.style.color = "var(--success-text)";
-        }
-        
-        renderTable(view);
-    }
-
-    function goNext() {
-        if(currentStep < currentViews.length - 1) {
-            currentStep++;
-            updateUI();
-        } else {
-            if(autoInterval) toggleAuto();
-        }
-    }
-
-    function goPrev() {
-        if(currentStep > 0) {
-            currentStep--;
-            updateUI();
-        }
-    }
-
-    function goReset() {
-        if(autoInterval) toggleAuto();
-        currentStep = 0;
-        updateUI();
-    }
-    
-    function toggleAuto() {
-        let btn = document.getElementById('btn-auto');
-        if(autoInterval) {
-            clearInterval(autoInterval);
-            autoInterval = null;
-            btn.innerText = "Auto ▶";
-            btn.className = "btn secondary";
-        } else {
-            btn.innerText = "Stop ⏸";
-            btn.className = "btn primary";
-            autoInterval = setInterval(goNext, 3500); // 3.5s per step
-        }
-    }
-
-    // Editor Logic
-    function showEditor() {
-        if(autoInterval) toggleAuto();
-        document.getElementById('tableau-container').style.display = 'none';
-        document.getElementById('editor-container').style.display = 'block';
-        
-        document.getElementById('edit-vars').value = currentProblem.numVars;
-        document.getElementById('edit-cons').value = currentProblem.numCons;
-        buildEditorGrid(true);
-    }
-
-    function buildEditorGrid(prepopulate = false) {
-        let nv = parseInt(document.getElementById('edit-vars').value);
-        let nc = parseInt(document.getElementById('edit-cons').value);
-        
-        let usePre = prepopulate && currentProblem.numVars === nv && currentProblem.numCons === nc;
-
-        let html = `<table class="edit-table"><tr><th style="color:#60a5fa">Objective (Max Z)</th>`;
-        for(let i=0; i<nv; i++) {
-            let v = usePre ? currentProblem.c[i] : 1;
-            html += `<td><input type="number" id="obj-c${i}" value="${v}"> ${sub('x'+(i+1))}</td>`;
-        }
-        html += `</tr>`;
-        
-        for(let r=0; r<nc; r++) {
-            html += `<tr><td style="color:#cbd5e1">Constraint ${r+1}</td>`;
-            for(let c=0; c<nv; c++) {
-                let v = usePre ? currentProblem.A[r][c] : 1;
-                html += `<td><input type="number" id="a-${r}-${c}" value="${v}"> ${sub('x'+(c+1))}</td>`;
-            }
-            let bval = usePre ? currentProblem.b[r] : 10;
-            html += `<td>&le; <input type="number" id="b-${r}" value="${bval}"></td></tr>`;
-        }
-        html += `</table>`;
-        document.getElementById('edit-matrix').innerHTML = html;
-    }
-
-    function applyProblem() {
-        let nv = parseInt(document.getElementById('edit-vars').value);
-        let nc = parseInt(document.getElementById('edit-cons').value);
-        
-        let c = [];
-        for(let i=0; i<nv; i++) c.push(parseFloat(document.getElementById(`obj-c${i}`).value) || 0);
-        
-        let A = [];
-        let b = [];
-        for(let r=0; r<nc; r++) {
-            let row = [];
-            for(let j=0; j<nv; j++) {
-                row.push(parseFloat(document.getElementById(`a-${r}-${j}`).value) || 0);
-            }
-            A.push(row);
-            b.push(parseFloat(document.getElementById(`b-${r}`).value) || 0);
-        }
-        
-        currentProblem = { numVars: nv, numCons: nc, c, A, b };
-        
-        document.getElementById('tableau-container').style.display = 'block';
-        document.getElementById('editor-container').style.display = 'none';
-        
-        initApp(currentProblem);
-    }
-
-    function cancelEdit() {
-        document.getElementById('tableau-container').style.display = 'block';
-        document.getElementById('editor-container').style.display = 'none';
-    }
-
-    function initApp(probInfo) {
-        let stdProb = buildStandardForm(probInfo);
-        currentViews = generateViews(stdProb);
-        currentStep = 0;
-        renderProblemDesc(probInfo);
-        updateUI();
-    }
-
-    // Start
-    window.onload = () => {
-        initApp(currentProblem);
-    };
+buildDots();
+updateProgress();
 </script>
 </body>
 </html>
